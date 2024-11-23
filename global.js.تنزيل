@@ -1,0 +1,54 @@
+/*
+var userContactsList = null;
+$(function(){
+	// 
+    // Scrolling Header & Sidebar
+    //
+	$(window).scrollTop(0);
+	
+	var hdrDiv = $(".header-wrapper");
+	var sdbrDiv = $(".sidebars");
+	
+	$(window).scroll(function () {
+	    var windowpos = $(window).scrollTop();
+
+	    if (windowpos <= 0) {
+	    	hdrDiv.css("top", 0);
+	    	sdbrDiv.css("top", 43);
+	    } else if (windowpos > 0) {
+	    	hdrDiv.css("top", windowpos);
+	    	sdbrDiv.css("top", windowpos + 43);
+	    }
+	    
+	    if($(".scroll-top").length){
+		    if (windowpos > 100) {
+		    	$(".scroll-top").css("opacity", "0.4");
+		    } else {
+		    	$(".scroll-top").css("opacity", "0");
+		    }
+	    }
+	});
+	
+	if(userContactsList == null){ 
+
+		$.ajax({
+			url :  document.location.protocol + "//" + document.location.host + "/webservice/eschool/conversationPortal/getUserSectionContacts",
+			method : "POST" ,
+			data : JSON.stringify({
+				 jwt : readCookie('tkn') 
+			}),
+		    contentType: "application/json", 
+			success : function(resp){
+				userContactsList = resp; 
+			}
+		}); 
+	}
+});*/
+
+function initScrollTop() {
+	// Click event to scroll to top
+	$('html, body').animate({
+		scrollTop : 0
+	}, 300);
+	return false;
+}

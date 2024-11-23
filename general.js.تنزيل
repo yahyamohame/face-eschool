@@ -1,0 +1,561 @@
+
+/*$(function(){
+	$('input[type="text"], textarea').each(function(){
+		$(this).attr("dir", "auto"); 
+	});
+});*/
+var currentEditorId;
+
+function chechArabic(element){
+    if($this.val().length == 1)
+    {
+        var x =  new RegExp("[\x00-\x80]+"); // is ascii
+ 
+        var isAscii = x.test($this.val());
+
+        if(isAscii)
+        {
+            $this.css("direction", "ltr");
+        }
+        else
+        {
+            $this.css("direction", "rtl");
+        }
+    }
+
+};
+    
+           $(document).on('click' , '.add-new-ebook a' , 
+					function() {
+						$('.upload-file-hidden').click();
+						return false;
+			})
+
+			$(document).on('click', '.hide-ebook-option .checkbox',
+					function() {
+						$(this).parent().toggleClass('active');
+					});
+           
+           $(document).on('click' , '.add-new-editor-media a' , 
+					function() {
+						$('.add-new-upload-file-hidden').click();
+						return false;
+			})
+		 
+	/* Teachers Notes */
+	$(document).on('click','.teacher-notes-header .material-selector a',
+			function() {
+				
+				$(this).toggleClass('active');
+				if ($(this).hasClass('active')){
+					$(this).css({"color" : "#fff", "background": $(this).attr('data-color')});
+				} else {
+					$(this).css({"color" : $(this).attr('data-color'),"background": "#fff"});
+				}
+				 
+	});
+
+	$(document).on('input','.notes-form textarea',
+			function() {
+				/*if ($(this).val().length > 0 && $('.material-selector a.active').length > 0 )
+					$('.notes-form input[type="submit"]').removeClass(
+							'disabled-button');
+				else
+					$('.notes-form input[type="submit"]').addClass(
+							'disabled-button');*/
+	});
+
+	// //////////////////
+
+	/* End Teachers Note */
+	/* Duplicate Note */
+	$(document).on('click','.duplicate-form-popup .materials-list li a.checkbox' ,
+					function() {
+						$(this).toggleClass('active');
+						$(this).closest('li').toggleClass('active');
+						if (($('.selection-list.classes-list li.active').length > 0)
+								&& ($('.selection-list.materials-list li.active').length > 0)) {
+							$(this).closest('.duplicate-form-popup-container')
+									.find('.duplicate-form-popup-footer input')
+									.removeClass('disabled-button');
+						} else {
+							$(this).closest('.duplicate-form-popup-container')
+									.find('.duplicate-form-popup-footer input')
+									.addClass('disabled-button');
+						}
+	});
+	
+	$(document).on('click','.duplicate-form-popup .materials-list li a.radio' ,
+			function() {
+		        $('.duplicate-form-popup .materials-list li').removeClass('active');
+				$(this).closest('li').toggleClass('active');
+				if (($('.selection-list.classes-list li.active').length > 0)
+						&& ($('.selection-list.materials-list li.active').length > 0)) {
+					$(this).closest('.duplicate-form-popup-container')
+							.find('.duplicate-form-popup-footer input')
+							.removeClass('disabled-button');
+				} else {
+					$(this).closest('.duplicate-form-popup-container')
+							.find('.duplicate-form-popup-footer input')
+							.addClass('disabled-button');
+				}
+});
+
+	/* End Duplicate Note */
+
+	
+
+	$(document).on('click', '.assignment-popup-form .window-close, .assignment-popup-form .cancel', function () {
+		$('.overlay-section').removeClass('active');
+		$('.organizer-upload-form-content').empty();
+	});
+
+	$(document).on('click', '.assignment-popup-form .checkbox', function () {
+		$(this).toggleClass('active');
+	});
+
+	$(document).on('click', '.assignment-popup-form .material-selector.new-assignment a', function () {
+		$('.assignment-popup-form .material-selector a').removeClass('active');
+		
+		$('.material-selector a').each(function(){
+			$(this).css({"color" : $(this).attr('data-color'),"background": "#fff"});
+		});
+		$(this).addClass('active');
+		$(this).css({"color" : "#fff", "background": $(this).attr('data-color')});
+ 
+	});
+
+	$(document).on('input', '.assignment-popup-form textarea', function () {
+		/*if (($(this).val().length > 0) && ($('.assignment-popup-form .material-selector').find('a.active').length > 0)) {
+			$('.assignment-popup-form .assign').removeClass('disabled-button');
+		} else {
+			$('.assignment-popup-form .assign').addClass('disabled-button');
+		}*/
+	});
+	
+	/* End Assignments */
+	
+	
+	/* Resource */
+	
+	$(document).on('click', '.teacher-library-header .material-selector a', function () {
+		$('.material-selector a').removeClass('active');
+		
+		$('.material-selector a').each(function(){
+			$(this).css({"color" : $(this).attr('data-color'),"background": "#fff"});
+		});
+		$(this).addClass('active');
+		$(this).css({"color" : "#fff", "background": $(this).attr('data-color')});
+		
+	});
+
+	$(document).on('click', '.edit-upload-container .window-close, .upload-form-tools .cancel', function (event) {
+		event.preventDefault();
+
+		$('.edit-upload-container').removeClass('active');
+		
+	});
+	
+	$(document).on('input', 'input.input-enable', function(){
+		if ($(this).val().length > 0)
+			$('input.input-enable').closest('.overlay-section').find('.submit').removeClass('disabled-button');
+		else
+			$('input.input-enable').closest('.overlay-section').find('.submit').addClass('disabled-button');
+	});
+ 
+	$(document).on('click', '.button-accordion', function () {
+		if($('.more-menu') && $('.more-menu').hasClass('active')){
+			$('.more-menu').removeClass('active');
+			$('.button-more').removeClass('active');
+		}
+		if (!$(this).closest('.day-record').find('.day-record-content').is(':visible')) {
+			$('.day-record-content').slideUp();
+			$(this).closest('.day-record').find('.day-record-content').slideDown();
+			$('.button-accordion').removeClass('active');
+			$(this).addClass('active');
+		} else {
+			
+			$('.day-record-content').slideUp();
+			$(this).removeClass('active');
+		}
+	});
+	
+	/* Open posts */
+
+	$(document).on('click', '.teacher-discussions-header-title .material-selector a', function () {
+		$('.material-selector a').removeClass('active');
+		
+		$('.material-selector a').each(function(){
+			$(this).css({"color" : $(this).attr('data-color'),"background": "#fff"});
+		});
+		$(this).addClass('active');
+		$(this).css({"color" : "#fff", "background": $(this).attr('data-color')});
+		
+	});
+ 
+	/* Open Post */
+	
+	$(document).on('click', '.teacher-topics-post .topics-post-header .discussion-post-tools .edit-icon', function (event) {
+		event.preventDefault();
+
+		$('.topics-post-title h3').hide();
+		$('.topics-post-title .post-title-editor').toggleClass('active');
+
+		$('.topics-post-item.dr-post .topics-poster-details-content p').hide();
+		$('.post-body-editor').toggleClass('active');
+		$('.teacher-main-post-editor').show();
+
+		$('.discussion-post-tools .set1').removeClass('active');
+		$('.topics-poster-details-content .save-changes').addClass('active');
+	});
+	
+	$(document).on('click', '.topics-poster-details-content .save-changes .cancel, .topics-poster-details-content .save-changes .save', function (event) {
+		event.preventDefault();
+
+		$('.topics-post-title .post-title-editor').toggleClass('active');
+		$('.topics-post-item .post-body-editor').toggleClass('active');
+		$('.topics-post-title h3').show();
+		$('.topics-post-item.dr-post .topics-poster-details-content p').show();
+		$('.discussion-post-tools .set1').addClass('active');
+		$('.topics-poster-details-content .save-changes').removeClass('active');
+		$('.teacher-main-post-editor').hide();
+	});
+	
+	$(document).on('click' , '.navigation li a' , function(){
+		$('.children-block .child-item').removeClass('active');
+	});
+		
+	$(document).on('keypress keyup blur' , '.only-decimal' , function (event) {
+        if ((event.which != 46 || $(this).val().indexOf('.') != -1) && (event.which < 48 || event.which > 57)) {
+            event.preventDefault();
+        }
+    });
+ 
+	$(document).on('click', 'li[role="group"] .select2-results__group', function(e) {
+		var groupTitle = $(this).text();
+		var selectId = $(this).closest('ul').attr('id');
+		
+		if (!$(this).hasClass('active')) {
+			$(this).addClass('active');
+			$('span[aria-owns="' + selectId + '"]').closest('.receiver-box-container').find('select.select2 optgroup[label="' + groupTitle + '"] option').each(function(){
+				$(this).prop('selected', true);
+			});
+			$('span[aria-owns="' + selectId + '"]').closest('.receiver-box-container').find('select.select2').trigger("change");
+			
+		} else {
+			$(this).removeClass('active');
+			$('span[aria-owns="' + selectId + '"]').closest('.receiver-box-container').find('select.select2 optgroup[label="' + groupTitle + '"] option').each(function(){
+				$(this).prop('selected', false);
+			});
+			$('span[aria-owns="' + selectId + '"]').closest('.receiver-box-container').find('select.select2').trigger("change");
+		}
+	});
+  
+    function removeUploadedItems(){
+    	$('.school-activity-upload-form-content .uploaded-item.uploading').remove();
+    }
+
+    /***************************************************************************
+	 * Course Evaluation Grades
+	 **************************************************************************/
+    
+    $(document).on('click', '.grades-block-item .grades-block-item-header h4', function(){
+		$(this).closest('.grades-block-item').toggleClass('active');
+		if($(this).closest('.grades-block-item').hasClass('active')){
+			$(this).closest('.grades-block-item').find('.block-row-container').slideDown();
+		} else {
+			$(this).closest('.grades-block-item').find('.block-row-container').slideUp();
+		}
+	});
+    
+	/***************************************************************************
+	 * Link Resource
+	 **************************************************************************/
+  	  
+	$(document).on("click", ".overlay-section .window-close", function(){
+		$(this).closest(".overlay-section").removeClass("active");
+	});
+ 
+	var selectedResources = [];
+	 	 
+	$(document).on('click',
+				'.header-wrapper .notifications .notifications-icon, .header-wrapper .notifications .unread-notification',
+				function() {
+					$(this).closest('.notifications').find(
+							'.notifications-list').toggleClass('active');
+			});
+	
+	$(document).on('click', '.header-wrapper .apps.temp-apps .apps-icon', function() {
+		$('.header-wrapper .apps.temp-apps .apps-list').toggleClass('active');
+	});
+	
+	$(document).on('click', '.header .account img', function() {
+		$('.header-wrapper .account-list').toggleClass('active');
+	});
+	
+	$(document).on(
+			'click',
+			function(event) {
+				if (!$(event.target).closest('.apps.temp-apps').length) {
+					$('.apps.temp-apps').find('.apps-list')
+							.removeClass('active');
+				}
+				if (!$(event.target).closest('.account').length) {
+					$('.account').find('.account-list')
+							.removeClass('active');
+				}
+				// remove active for more menu when clicking outside
+				if (!$(event.target).closest('.more-menu-wrapper').length) {
+					$('.more-menu-wrapper').find('.more-menu')
+					.removeClass('active');
+					$('.more-menu-wrapper').find('.button-more')
+					.removeClass('active');
+				}
+			});
+	
+	/*********************************************************
+	*	PREK
+	**********************************************************/
+	
+	$(document).on('click','.prek-material .prek-material-header', function(){ 
+		if(!$(this).closest('.prek-material').hasClass('active')) {
+			$('.prek-material').removeClass('active');
+			$('.prek-material .prek-material-body').not(this).slideUp();
+			$(this).closest('.prek-material').addClass('active');
+			$(this).next('.prek-material .prek-material-body').slideDown();
+		} else {
+			$('.prek-material').removeClass('active');
+			$(this).next('.prek-material .prek-material-body').slideUp();
+		}
+	});
+	
+	/*********************************************************
+	*	COMPOSE
+	**********************************************************/
+
+	$(document).on('click', '.message-compose-contact-options .specific-user', function(){
+		$('.add-contacts-popup').addClass('active');
+	});
+	
+	$(document).on('click', '.sms-compose-contact-options .specific-user', function(){
+		$('.add-contacts-popup').addClass('active');
+	});
+
+	$(document).on('click', '.add-contacts-popup-footer .ok', function(){
+		$('.add-contacts-popup').removeClass('active');
+	});
+	
+	/*********************************************************
+	*	ADMINISTRATIVE COMPOSE
+	**********************************************************/
+
+	$(document).on('click', '.message-compose-contact-options .specific-user', function(){
+		$('.add-contacts-popup').addClass('active');
+	});
+	
+	$(document).on('click', '.add-contacts-popup-footer .ok', function(){
+		$('.add-contacts-popup').removeClass('active');
+	});
+		
+	/*********************************************************
+	*	MESSAGE DETAILS
+	**********************************************************/	
+	function getParameterByName(name, url) {
+	    if (!url) url = window.location.href;
+	    name = name.replace(/[\[\]]/g, "\\$&");
+	    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+	        results = regex.exec(url);
+	    if (!results) return null;
+	    if (!results[2]) return '';
+	    return decodeURIComponent(results[2].replace(/\+/g, " "));
+	}
+	
+	Number.isInteger = Number.isInteger || function(value) {
+	    return typeof value === "number" && 
+	           isFinite(value) && 
+	           Math.floor(value) === value;
+	};
+	
+	/**********************************************************
+	*		Popup cancel
+	**********************************************************/
+	
+	$(document).on('click', '.cancel', function () {
+		$(this).closest('.overlay-section').toggleClass('active');
+	});
+	
+	/**********************************************************
+	*		More Menu
+	**********************************************************/
+	
+	$(document).on('click','.button-more',function(){
+		var moreBtnActive = $(this).hasClass('active');
+		
+		$('.more-menu-wrapper').find('.more-menu').removeClass('active');
+		$('.more-menu-wrapper').find('.button-more').removeClass('active');
+		
+		if(moreBtnActive){
+			$(this).removeClass('active');
+			$(this).next('.more-menu').removeClass('active');
+			event.stopPropagation();
+		}
+		else{
+			$(this).addClass('active');
+			$(this).next('.more-menu').addClass('active');
+			event.stopPropagation();
+		}	
+
+	});
+	
+	/**********************************************************
+	*		Add Button Option in Portfolio
+	**********************************************************/
+	
+	$(document).on(
+			'click',
+			function(event) {
+				if($('.add-btn-options').hasClass('active')){
+					$('.add-btn-options').removeClass('active');
+				}
+			});
+		$(document).on(
+			'click','.add-btn',
+			function(event) {
+				if($('.add-btn-options').hasClass('active')){
+					$('.add-btn-options').removeClass('active');
+				} else {
+					$('.add-btn-options').addClass('active');
+				}
+				event.stopPropagation();
+			});
+	
+	/**********************************************************
+	*		Delete Dialog Confirmation
+	**********************************************************/
+	
+	$(document).on('click','.delete-close-container .delete-close',function(){
+		$(this).parents('.library-item').children('.delete-dialog').addClass('delete-dialog-open').removeClass('delete-dialog-close');
+	});
+	
+	$(document).on('click','.delete-resource',function(){
+		$(this).parents('.day-record-header').children('.delete-dialog').addClass('delete-dialog-open').removeClass('delete-dialog-close');
+	});
+	
+	$(document).on('click','.delete-shelf',function(){
+		$(this).parents('.day-record-header').children('.delete-dialog').addClass('delete-dialog-open').removeClass('delete-dialog-close');
+	});
+	
+	$(document).on('click','.delete-ebook',function(){
+		$(this).parents('.ebook-item').parent().children('.delete-dialog').addClass('delete-dialog-open').removeClass('delete-dialog-close');
+	});
+	
+	$(document).on('click','.delete-assignment',function(){
+		$(this).parents('.week-assignment-item').parent().children('.delete-dialog').addClass('delete-dialog-open').removeClass('delete-dialog-close');
+	});
+	
+	$(document).on('click','.delete-dialog-button',function(){
+		$(this).next('.delete-dialog').addClass('delete-dialog-open').removeClass('delete-dialog-close');
+	});
+	
+	$(document).on('click','.delete-dialog-close',function(event){
+		$(this).closest('.delete-dialog').removeClass('delete-dialog-open').addClass('delete-dialog-close');
+	});
+	
+	/**********************************************************
+	*		Toastr
+	**********************************************************/
+	
+	function toastrCall(state,msg){
+		toastr.options = {
+				  "closeButton": false,
+				  "debug": false,
+				  "newestOnTop": false,
+				  "progressBar": false,
+				  "positionClass": "toast-bottom-left",
+				  "preventDuplicates": false,
+				  "onclick": null,
+				  "showDuration": "200",
+				  "hideDuration": "300",
+				  "timeOut": "2000",
+				  "extendedTimeOut": "1000",
+				  "showEasing": "swing",
+				  "hideEasing": "linear",
+				  "showMethod": "fadeIn",
+				  "hideMethod": "fadeOut"
+				}
+		toastr[state](msg);
+	}
+	
+	function updateURLLang(lang){
+		var url = new URL(document.location.href);
+
+		var query_string = url.search;
+
+		var search_params = new URLSearchParams(query_string); 
+		search_params.set('lang', lang);
+		url.search = search_params.toString();
+		var new_url = url.toString();
+		 
+		if((new URL(document.location.href)).toString() != new_url){
+			
+			let hostname = document.location.hostname;
+		 	hostname = hostname.replace('www.','.'); 
+		 	hostname = hostname.replace('test.','.');
+			document.cookie = `_lang=${lang}; path=/; domain=${hostname}`;
+				
+			$("body").html('');
+			window.location.href = new_url;	
+		}
+
+	}
+	
+	/**********************************************************
+	*		Toastr
+	**********************************************************/
+	
+	function tooltip(){
+		$('[data-toggle="tooltip"]').tooltip({placement:'1'});
+	}
+	
+	/**********************************************************
+	*		Poll Question
+	**********************************************************/
+	
+	$(document).on('click', '.poll-question-header', function () {
+		if (!$(this).closest('.poll-question').find('.poll-question-content').is(':visible')) {
+			$('.poll-question-content').slideUp();
+			$(this).closest('.poll-question').find('.poll-question-content').slideDown();
+			$('.poll-question-header .poll-q-button-accordion').removeClass('active');
+			$(this).find('.poll-q-button-accordion').addClass('active');
+		} else {
+			
+			$('.poll-question-content').slideUp();
+			$(this).find('.poll-q-button-accordion').removeClass('active');
+		}
+	});
+	
+
+	
+	$(document).on('click','.poll-question-btn .button',function(){
+		$(this).closest('.poll-question-btn').find('.poll-dialog').addClass('poll-dialog-open').removeClass('poll-dialog-close');
+	});
+	
+	$(document).on('click','.poll-question-btn .poll-dialog-close',function(event){
+		$(this).closest('.poll-question-btn').find('.poll-dialog').removeClass('poll-dialog-open').addClass('poll-dialog-close');
+	});
+	
+	
+	/**
+	 * For New Connect 25/9/2019
+	 */
+	function toggleNext(ev) {
+		$(ev).next().toggleClass('active');
+	}
+	
+	function scrollBottom(){
+		$('.users-contents-message-category').animate({
+			scrollTop : $('.users-contents-message-category').children('.user-details-message-category-container').height() + ''
+		},300, function(){
+			$(this).next().css('top',$(this).children('.user-details-message-category-container').height() + 'px')
+		});
+	}

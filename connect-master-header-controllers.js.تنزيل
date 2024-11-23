@@ -1,0 +1,964 @@
+var masterHeaderApp = angular.module('masterHeaderApp', [ 'ngCookies','ui.slimscroll', 'pascalprecht.translate', 'ngMaterial' ]);
+
+/*masterHeaderApp.filter('capitalize', function() {
+    return function(input) {
+      return (!!input) ? input.charAt(0).toUpperCase() + input.substr(1).toLowerCase() : '';
+    }
+});*/
+
+/** *** Bundle **** */
+masterHeaderApp.config(function($translateProvider) {
+	$translateProvider.translations('en', master_header_en).translations('ar',
+			master_header_ar).translations('fr', master_header_fr).translations('tur', master_header_tur);
+
+	$translateProvider.preferredLanguage('en');
+});
+
+/** notifications **/
+var hashId = null;
+  
+// header data
+ 
+masterHeaderApp.service( 'headerService', function($http, $cookies) {
+	var accountWebservicePath = '/account/webservice/account/userProfile/';
+	
+	return {
+		getMasterHeaderData : function(appName) {
+			return $http.post(accountWebservicePath
+					+ 'getMasterHeaderData', {
+						appName: appName
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + getToken()
+				}
+			});
+		},
+		getSessionMasterHeaderData : function(authId) {
+			return $http.post(accountWebservicePath
+					+ 'getSessionMasterHeaderData', {
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + authId
+				}
+			});
+		} , 
+		updateUserDefaultApp : function(defaultApp) {
+			return $http.post(accountWebservicePath + 'updateUserDefaultApp', { 
+				defaultApp: defaultApp
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + getToken()
+				}
+			});
+		},
+		getUnreadMessages : function(studentHashId) {
+			return $http.post('/connect/webservice/conversation/getUnreadMessagesCountByUser/', {
+				studentHashId: studentHashId
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + getToken()
+				}
+			});
+		}, 
+		getUnreadNotifications : function() {
+			return $http.post('/connect/webservice/notification/getUnreadNotificationsCountByUser/', {
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + getToken()
+				}
+			});
+		}, 
+		getNotificationsByUser : function(oldestNotificationId) {
+			return $http.post('/connect/webservice/notification/getNotificationsByUser/', {
+				oldestNotificationId: oldestNotificationId
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + getToken()
+				}
+			});
+		}, 
+		getUserCollapsedNotifications : function(userId, type, collapseKey, plainText) {
+			return $http.post('/connect/webservice/notification/getUserCollapsedNotifications/', {
+				userId: userId,
+				type: type,
+				collapseKey: collapseKey,
+				plainText: plainText
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + getToken()
+				}
+			});
+		},
+		showHighlightsMedia : function(studentHashId) {
+			return $http.post('/connect/webservice/integrations/highlights/showHighlightsMedia', {
+				studentHashId: studentHashId
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + getToken()
+				}
+			});
+		}
+	}
+	function getToken() {
+		return $cookies.get('tkn');
+	}
+});
+
+masterHeaderApp.directive("textClamp", ['$timeout', function ($timeout) {
+	
+	
+	function ellipsis(element,attrs){console.log(attrs.textClamp)
+		// default option
+	    var defaults = {
+	        'row' : attrs.textClamp ? parseInt(attrs.textClamp) : 1, // show rows
+	        'onlyFullWords': false, // set to true to avoid cutting the text in the middle of a word
+	        'char' : '...', // ellipsis
+	        'callback': function() {},
+	        'position': 'tail' // middle, tail
+	    };
+
+	    var options = $.extend(defaults, options);
+	
+	    $(element).each(function() {
+	        // get element text
+	        var $this = $(this);
+	        var text = $this.text();
+	        var origText = text;
+	        var origLength = origText.length;
+	        var origHeight = $this.height();
+	        var children = $this.children();
+	        // get height
+	        $this.text('a');
+	        var lineHeight =  parseFloat($this.css("lineHeight"), 10);
+	        var rowHeight = $this.height();
+	        var gapHeight = lineHeight > rowHeight ? (lineHeight - rowHeight) : 0;
+	        var targetHeight = gapHeight * (options.row - 1) + rowHeight * options.row;
+	
+	        targetHeight = targetHeight + options.row;
+	        
+	        if (origHeight <= targetHeight) {
+	            $this.text(text);
+	            options.callback.call(this);
+	            return;
+	        }
+	
+	        var start = 1, length = 0;
+	        var end = text.length;
+	
+	        if(options.position === 'tail') {
+	            while (start < end) { // Binary search for max length
+	                length = Math.ceil((start + end) / 2);
+	
+	                $this.text(text.slice(0, length) + options['char']);
+	
+	                if ($this.height() <= targetHeight) {
+	                    start = length;
+	                } else {
+	                    end = length - 1;
+	                }
+	            }
+	
+	            text = text.slice(0, start - 2);
+	
+	            if (options.onlyFullWords) {
+	                text = text.replace(/[\u00AD\w\uac00-\ud7af]+$/, ''); // remove fragment of the last word together with possible soft-hyphen characters
+	            }
+	            text += options['char'];
+	
+	        }else if(options.position === 'middle') {
+	
+	            var sliceLength = 0;
+	            while (start < end) { // Binary search for max length
+	                length = Math.ceil((start + end) / 2);
+	                sliceLength = Math.max(origLength - length, 0);
+	
+	                $this.text(
+	                    origText.slice(0, Math.floor((origLength - sliceLength) / 2)) +
+	                           options['char'] +
+	                           origText.slice(Math.floor((origLength + sliceLength) / 2), origLength)
+	                );
+	
+	                if ($this.height() <= targetHeight) {
+	                    start = length;
+	                } else {
+	                    end = length - 1;
+	                }
+	            }
+	
+	            sliceLength = Math.max(origLength - start, 0);
+	            var head = origText.slice(0, Math.floor((origLength - sliceLength) / 2));
+	            var tail = origText.slice(Math.floor((origLength + sliceLength) / 2), origLength);
+	
+	            if (options.onlyFullWords) {
+	                // remove fragment of the last or first word together with possible soft-hyphen characters
+	                head = head.replace(/[\u00AD\w\uac00-\ud7af]+$/, '');
+	            }
+	
+	            text = head + options['char'] + tail;
+	        }
+	
+	        $this.text(text);
+	        
+	        if($this.text().startsWith(children[0].textContent)){
+	        	$this.text($this.text().replace(children[0].textContent,''));
+	        	$this.prepend(children[0]);
+	        }
+	
+	        options.callback.call(this);
+	    });
+	
+	    return this;
+	}
+	
+	     return {
+	         link: function (scope, el, attrs) {
+	             $timeout(function(){
+	            	 ellipsis(el,attrs); 
+	             });
+	         }
+	     };
+	 }]);
+
+masterHeaderApp.directive('linkify', ['$timeout', function($timeout){
+	  return {
+		    restrict: 'A',
+		    replace: true,
+		    link: function(scope, element, attrs){
+		      var linkify = function(text){
+		        if (text) {
+		          text = text.replace(
+		            /((https?\:\/\/)|(www\.))(\S+)(\w{2,4})(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/gi,
+		            function(url){
+		              var full_url = url;
+		              if (!full_url.match('^https?:\/\/')) {
+		                full_url = 'http://' + full_url;
+		              }
+		              return '<a target="_blank" href="' + full_url + '">' + url + '</a>';
+		            }
+		          );
+		        }
+		        return text;
+		      };
+
+		      $timeout(function() {
+		        element.html(linkify(element.text()));
+		      });
+		    }
+		  };
+}]);
+
+/*profile*/
+masterHeaderApp.directive('profileOnError', function () {
+     return {
+        restrict: 'A',
+        link: function (scope, element, attr) {
+            element.on('error', function () {
+                var origSrc = element.attr('data');
+                var timeout, attempsCount = 0;
+
+                element.attr('src', attr.profileOnError);
+
+                function reload() {
+                    attempsCount = attempsCount + 1;
+                    if (attempsCount > 5)
+                        return;
+
+                    timeout = setTimeout(function () {
+
+                        var newImg = new Image;
+                        newImg.onload = function () {
+                            element.attr('src', this.src);
+                            clearTimeout(timeout);
+                        }
+                        newImg.onerror = function () {
+                            reload();
+                        }
+                        newImg.src = origSrc;
+
+                    }, 1000);
+
+                }
+
+                //reload();
+
+            })
+        }
+    }
+});
+
+masterHeaderApp.controller('headerController', function($scope,headerService,$cookies, $filter, $mdSidenav, $mdDialog, $sce){
+	$scope.profileImagePath;
+	$scope.profileImagePathURL;
+	$scope.defaultProfileImage;
+	$scope.userType;
+	$scope.teacherType;
+	$scope.userPermissions = []; 
+	
+	$scope.branchImagePath;
+	$scope.branchImageURL;
+	$scope.enBranchName;
+	$scope.arBranchName;
+	 
+	$scope.appName = window.location.pathname.split('/')[1].split('.')[0].toLocaleLowerCase();
+	
+	if($scope.appName == null || $scope.appName == "" || $scope.appName == "index"){
+		$scope.appLogo = '/resources/connect/images/logo-header.png'
+	}
+	else{
+		$scope.appLogo = 'master-header/images/logos/' + $scope.appName + '-econnect-logo.png?v=3';	
+	}
+	
+	$scope.unreadMessages = 0;
+	
+	$scope.logout = function() { 
+		var hostName = document.location.hostname;
+		var hostNamePortal = document.location.hostname;
+		hostName = hostName.replace('www.','.');
+		hostName = hostName.replace('test.','.');
+		$cookies.remove("tkn", {path : '/',domain : hostName});  
+		$cookies.remove("tknArch", {path : '/',domain : hostName});  
+    	document.cookie = 'JSESSIONID=;expires=Thu, 01 Jan 1970 00:00:01 GMT;Path=/';
+		localStorage.clear();
+		location.reload();
+	}
+	
+	$scope.openHighlightsLibrary = function(){
+		
+      /// console.log("https://library.highlights.com/sso/hllsso/procSso?highlights="+$scope.userId);
+      // return;
+      
+      let selectedStudentHashId = null
+      
+      if($scope.userType == 1){
+	
+		let _studentHashId = window.location.hash.split('/')[2];
+	
+		if(_studentHashId){
+			_studentHashId = _studentHashId.split('?')[0];
+			
+			if(_studentHashId.length == 11){
+				selectedStudentHashId = _studentHashId;
+			}
+			else{
+				alert('Please select a child.');
+		      	return;
+			}
+			
+		}
+		else{ 
+			alert('Please select a child.');
+	      	return;
+		}   
+      }
+       
+        mediaWindow = window.open("/mediaLoading.html", "_blank");
+        	
+        headerService.showHighlightsMedia(selectedStudentHashId).then(
+			function(resp) {
+			if(resp.data && resp.data.mediaUrl){  
+		       mediaWindow.location.href = resp.data.mediaUrl;
+			}
+			else{
+				mediaWindow.close();
+			}
+		}, function(error) { 
+				mediaWindow.close();
+		});
+		
+	}
+		
+	function getMasterHeaderData() {
+		headerService.getMasterHeaderData($scope.appName).then(
+				function(resp) {
+					$scope.profileImagePath = document.location.protocol + "//" + document.location.host + '/' + resp.data.image;
+					$scope.profileImagePathURL = resp.data.imageURL;
+					$scope.defaultProfileImage = resp.data.defaultImage;
+					$scope.userType = resp.data.userType;
+					$scope.userPermissions = (resp.data.userPermissions == null || resp.data.userPermissions == "") ? [] : JSON.parse(resp.data.userPermissions);
+					$scope.teacherType = resp.data.teacherType; 
+					$scope.defaultApp = resp.data.defaultApp; 
+					
+					$scope.fullName = $scope.localize(resp.data.firstName) + ' ' + $scope.localize(resp.data.lastName);
+					$scope.userTypeTitle = $scope.localize(resp.data.userTypeTitle);
+					
+					$scope.allowAccessToPollReport = resp.data.allowAccessToPollReport;
+					$scope.allowAccessToAttendanceReport = resp.data.allowAccessToAttendanceReport;
+					$scope.allowAccessToApplicationReport = resp.data.allowAccessToApplicationReport;
+					$scope.allowAccessToEmploymentReport = resp.data.allowAccessToEmploymentReport;
+					$scope.allowAccessToSmsReport = resp.data.allowAccessToSmsReport;
+					$scope.allowAccessToReportCard = resp.data.allowAccessToReportCard;
+					$scope.allowAccessToUserReport = resp.data.allowAccessToUserReport;
+					$scope.allowAccessToBlackListedUserReport = resp.data.allowAccessToBlackListedUserReport;
+					$scope.allowAccessToBannedUserReport = resp.data.allowAccessToBannedUserReport;
+					$scope.allowAccessToSettings = resp.data.allowAccessToSettings;
+					$scope.allowAccessToDocumentReport = resp.data.allowAccessToDocumentReport;
+					$scope.allowAccessToRequestReport = resp.data.allowAccessToRequestReport;
+					$scope.allowAccessToFormsRequestReport = resp.data.allowAccessToFormsRequestReport;
+					$scope.allowAccessToHighlightsLibrary = resp.data.allowAccessToHighlightsLibrary;
+					$scope.manageHighlightsLibrary = resp.data.manageHighlightsLibrary;
+					
+					hashId = resp.data.hashId; 
+				}, function(error) { 
+	                if (error.status == 401)
+	                	$scope.logout();
+				});
+	}
+	
+	$scope.getUnreadMessages = function(studentHashId) {
+	    
+		headerService.getUnreadMessages(studentHashId).then(
+				function(resp) {
+					// user notifications
+					if(resp.data.receiverUnreadMessageCount && resp.data.receiverUnreadMessageCount.unreadMessagesCount){
+						var unreadMessages = resp.data.receiverUnreadMessageCount.unreadMessagesCount;
+						
+						if(unreadMessages > 99)
+							$scope.unreadMessages = 99; 
+						else
+							$scope.unreadMessages = unreadMessages; 
+					}
+					else{
+						$scope.unreadMessages = 0;
+					}
+					
+					// selected student notifications
+					if(resp.data.studentUnreadMessageCount && resp.data.studentUnreadMessageCount.unreadMessagesCount){
+						var studentUnreadMessages = resp.data.studentUnreadMessageCount.unreadMessagesCount;
+						
+						if(unreadMessages > 99)
+							$scope.studentUnreadMessages = 99; 
+						else
+							$scope.studentUnreadMessages = studentUnreadMessages; 
+					}
+					else{
+						$scope.studentUnreadMessages = 0;
+					}
+				}, function(error) { 
+				});
+	}
+	
+	$scope.getUnreadNotifications = function() {
+		headerService.getUnreadNotifications().then(
+				function(resp) {
+					if(resp.data.unreadNotifications){
+						$scope.unreadNotifications = resp.data.unreadNotifications; 
+					}
+					else{
+						$scope.unreadNotifications = 0;
+					}
+				}, function(error) { 
+				});
+	}
+	
+	if($cookies.get('tkn') != undefined){
+		getMasterHeaderData();
+		$scope.getUnreadMessages();
+		$scope.getUnreadNotifications();
+	}
+	
+	function getSessionMasterHeaderData(authId) {
+		headerService.getSessionMasterHeaderData(authId).then(
+				function(resp) {
+					$scope.branchImagePath = resp.data.branchImage;
+					$scope.branchImageURL = resp.data.branchImageURL;
+					$scope.enBranchName = resp.data.enBranchName;
+					$scope.arBranchName = resp.data.arBranchName;
+				}, function(error) { 
+				});
+	}
+
+	var registrationId = getParameterByName("registrationId",  document.location.href);
+	if(registrationId != undefined && registrationId != null){
+		getSessionMasterHeaderData(registrationId);
+	}
+	else if($cookies.get('tkn') != null){
+		getSessionMasterHeaderData($cookies.get('tkn'));
+	}
+	
+	// localization
+	$scope.language = getParameterByName('lang', document.location.href);
+	/*$scope.languages = [ 'en', 'ar', 'fr', 'tur'];
+	if ($scope.languages.indexOf($scope.language) == -1) {
+		$scope.language = 'en';
+	}
+	
+	$scope.updateLanguage = function() {
+		$translate.use($scope.language);
+	};*/
+	
+    $scope.languages = [{'title': 'English', value: 'en'}, {'title': 'Français', value: 'fr'}, {'title': 'Turkish', value: 'tur'}, {'title': 'العربية', value: 'ar'}];
+    
+    $scope.selectedLanguage = $filter('filter')(
+            $scope.languages, {
+            	value: getParameterByName('lang', document.location.href)
+            }, true)[0];
+    
+	if ($scope.selectedLanguage == null) {
+		$scope.selectedLanguage = $scope.languages[0];
+	}
+	
+	$scope.updateLanguage = function(selectedLanguage) {
+		updateURLLang(selectedLanguage);
+	}
+	
+	//////////////////////////////////////////////////////////////////////// user default app management
+	
+	$scope.editedDefaultApp;
+	
+	$scope.showUserDefaultAppPopup = function(ev) {
+ 		$scope.editedDefaultApp = angular.copy($scope.defaultApp);
+ 		
+ 		$mdDialog.show({
+			contentElement: "#defaultAppSelectorId",
+			parent: angular.element(document.body),
+			targetEvent: null,
+			clickOutsideToClose: false,
+			escapeToClose: false,
+			fullscreen: $scope.customFullscreen, // Only for -xs, -sm breakpoints.
+			parent : angular.element('body')
+		});
+	}
+	
+	$scope.hideUserDefaultAppPopup = function() {
+	    $mdDialog.hide();
+	}
+     
+	$scope.updateUserDefaultApp = function() {
+			    
+	    $scope.defaultAppLoadingFlag = true;
+		headerService.updateUserDefaultApp($scope.editedDefaultApp).then(
+			function(resp) { 
+				$scope.defaultApp = angular.copy($scope.editedDefaultApp);
+				
+				$scope.hideUserDefaultAppPopup();
+				
+				$scope.defaultAppLoadingFlag = false;
+			}, function(error) { 
+	 			$scope.defaultAppLoadingFlag = false;
+		});
+	}
+     
+	$scope.selectedDefaultAppChange = function(defaultApp) {		
+		$scope.editedDefaultApp = defaultApp;
+	}
+	
+	$scope.resetDefaultApp = function(){
+		$scope.editedDefaultApp = null;
+	}
+	
+	//////////////////////////////////////////////////////////////////////// notifications
+	$scope.usersNotifications = [];
+	$scope.notificationsViewed = false;
+	$scope.moreNotificationsExist = false;
+	$scope.oldestNotificationId = 0;
+	
+	$scope.getNotificationsByUser = function() {
+		$scope.loadingData = true;
+
+		headerService.getNotificationsByUser($scope.oldestNotificationId).then(function(resp) {
+			$scope.loadingData = false;
+			$scope.notificationsViewed = true;
+			var usersNotifications = resp.data.usersNotifications;
+			$scope.moreNotificationsExist = resp.data.moreNotificationsExist;
+			 
+			usersNotifications.forEach(function(itm){
+				
+				if($scope.oldestNotificationId == 0 || itm.oldestNotificationId < $scope.oldestNotificationId)
+					$scope.oldestNotificationId = itm.oldestNotificationId;
+				
+				switch(itm.type) {
+				  case 0:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						
+				  		if(itm.count == 1)
+				  			itm.localizedBody = 'submitted new Assessment'; 
+				  		else
+				  			itm.localizedBody = 'and ' + (itm.count - 1) + ' others submitted new Assessments';
+						
+				  		itm.localizedRecipient = $scope.localize(itm.recipientFirstName) + ' ' + $scope.localize(itm.recipientMiddleName) + ' ' + $scope.localize(itm.recipientLastName);
+					  break;
+				  case 1:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'approved an Assessment';
+				  		if(itm.count > 1)
+				  			itm.localizedBody = 'approved ' + itm.count + ' Assessments';
+						itm.localizedRecipient = $scope.localize(itm.recipientFirstName) + ' ' + $scope.localize(itm.recipientMiddleName) + ' ' + $scope.localize(itm.recipientLastName);
+					    break;
+				  case 2:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'rejected an Assessment';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'rejected ' + itm.count + ' Assessments';
+						itm.localizedRecipient = $scope.localize(itm.recipientFirstName) + ' ' + $scope.localize(itm.recipientMiddleName) + ' ' + $scope.localize(itm.recipientLastName);
+					    break;
+				  case 3:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'took a behavioral note';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'took ' + itm.count + ' behavioral notes';
+					    break;
+				  case 4:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'was absent / late 1 time';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'was absent / late ' + itm.count + ' times';
+					    break;
+				  case 5:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'has a grade submitted';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'has ' + itm.count + ' grades submitted';
+					    break;
+				  case 6: 
+						itm.localizedBody = 'New application was submitted';
+						itm.localizedRecipient = $scope.localize(itm.recipientFirstName) + ' ' + $scope.localize(itm.recipientMiddleName) + ' ' + $scope.localize(itm.recipientLastName);
+				  		
+						if(itm.count > 1)
+							itm.localizedBody = itm.count + ' new applications was submitted';
+					    break;
+				  case 7:
+						itm.localizedSubject = $scope.localize(itm.schoolName);
+						itm.localizedBody = 'sent you a message';
+				  		if(itm.count > 1)
+				  			itm.localizedBody = 'sent you ' + itm.count + ' messages';
+						itm.localizedRecipient = $scope.localize(itm.recipientFirstName) + ' ' + $scope.localize(itm.recipientMiddleName) + ' ' + $scope.localize(itm.recipientLastName);
+					    break;
+				  case 8:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'sent you a message';
+				  		if(itm.count > 1)
+				  			itm.localizedBody = 'sent you ' + itm.count + ' messages';
+						itm.localizedRecipient = $scope.localize(itm.recipientFirstName) + ' ' + $scope.localize(itm.recipientMiddleName) + ' ' + $scope.localize(itm.recipientLastName);
+					    break;
+				  case 10:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						
+				  		if(itm.count == 1)
+				  			itm.localizedBody = 'added new behavioral note'; 
+				  		else
+				  			itm.localizedBody = 'and ' + (itm.count - 1) + ' others added new behavioral notes';
+						
+					  break;
+				  case 11:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'has a resource submitted';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'has ' + itm.count + ' resources submitted';
+					    break;
+				  case 12:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'has a published exam';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'has ' + itm.count + ' published exams';
+					    break;
+				  case 13:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'has a discussion submitted';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'has ' + itm.count + ' discussion submitted';
+					    break;
+				  case 14:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'has a announcement submitted';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'has ' + itm.count + ' announcement submitted';
+					    break;
+				  case 15:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'has a new room invitation';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'has ' + itm.count + ' new rooms invitations';
+					    break;
+				  case 16:
+					  itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+					  itm.localizedBody = 'has a new poll';
+					  if(itm.count > 1)
+						  itm.localizedBody = 'has ' + itm.count + ' new polls';
+					  break;
+				case 21:
+						itm.localizedSubject = $scope.localize(itm.firstName) + ' ' + $scope.localize(itm.middleName) + ' ' + $scope.localize(itm.lastName);
+						itm.localizedBody = 'published an Exam';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'published ' + itm.count + ' exams';
+					    break;
+				  default:
+						itm.localizedBody = 'You have new notification';
+				  		if(itm.count > 1)
+							itm.localizedBody = 'You have ' + itm.count + ' new notifications';
+				}
+								 
+			});
+
+			$scope.usersNotifications = $scope.usersNotifications.concat(usersNotifications);
+			
+		}, function(error) {
+			$scope.loadingData = false;
+			/*console.log(error);*/
+		});
+	}
+	 
+	$scope.getUserCollapsedNotifications = function(notification,ev) {
+
+		$scope.selectedNotification = null;
+		$scope.notificationLoadingFlag = true;
+		notification.seen = true;
+		var targetPopupId = "";
+		
+		switch(notification.type) {
+		  case 0:
+			  targetPopupId = "notificationPopupApprovedAssessmentsId";
+			  break;
+		  case 1:
+			  targetPopupId = "notificationPopupApprovedAssessmentsId";
+			  break;
+		  case 2:
+			  targetPopupId = "notificationPopupApprovedAssessmentsId";
+			  break;
+		  case 3:
+			  targetPopupId = "notificationPopupBehaviorSubmittedId";
+			  break;
+		  case 4:
+			  targetPopupId = "notificationPopupAttendanceSubmittedId";
+			  break;
+		  case 5:
+			  targetPopupId = "notificationPopupGradesSubmittedId";
+			  break;
+		  case 6:
+			  targetPopupId = "notificationPopupNewAppRequestsId";
+			  break;
+		  case 7:
+			  targetPopupId = "notificationPopupSchoolId";
+			  break;
+		  case 8:
+			  targetPopupId = "notificationPopupSupportTeamId";
+			  break;
+		  case 10:
+			  targetPopupId = "notificationPopupTeacherBehaviorSubmittedId";
+			  break;
+		  case 11:
+			  targetPopupId = "notificationPopupLibrarySubmittedId";
+			  break;
+		  case 12:
+			  targetPopupId = "notificationPopupStudentExamId";
+			  break;
+		  case 13:
+			  targetPopupId = "notificationPopupDiscussionSubmittedId";
+			  break;
+		  case 14:
+			  targetPopupId = "notificationPopupAnnouncementSubmittedId";
+			  break;
+		  case 15:
+			  targetPopupId = "notificationPopupRoomPublishedId";
+			  break;
+		  case 16:
+			  targetPopupId = "notificationPopupPollPublishedId";
+			  break;
+		case 21:
+			  targetPopupId = "notificationPopupTeacherExamId";
+			  break;  
+		  default:
+		}
+
+		$scope.openNotificationPopup(targetPopupId, ev);
+		
+		headerService.getUserCollapsedNotifications(notification.userId, notification.type, notification.collapseKey, false).then(function(resp) { 
+			$scope.selectedNotification = resp.data; 
+			$scope.notificationLoadingFlag = false;
+						
+			switch($scope.selectedNotification.type) {
+			  case 0:  
+
+				  $scope.selectedNotification.userCollapsedNotificationDetails.forEach(function(itm){
+					  itm.localizedName = $scope.localize(itm.firstName) + " " + $scope.localize(itm.middleName) + " " + $scope.localize(itm.lastName);
+				  });
+				  
+				  targetPopupId = "notificationPopupApprovedAssessmentsId";
+				  break;
+			  case 1:
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+
+				  targetPopupId = "notificationPopupApprovedAssessmentsId";
+				  break;
+			  case 2:
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  
+				  targetPopupId = "notificationPopupApprovedAssessmentsId";
+				  break;
+			  case 3:
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  targetPopupId = "notificationPopupBehaviorSubmittedId";
+				  break;
+			  case 4:
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  targetPopupId = "notificationPopupAttendanceSubmittedId";
+				  break;
+			  case 5:
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  targetPopupId = "notificationPopupGradesSubmittedId";
+				  break;
+			  case 6:
+
+				  if($scope.selectedNotification.schoolName != null && $scope.selectedNotification.schoolName != "")
+					  $scope.selectedNotification.localizedSchoolName = $scope.localize(JSON.parse($scope.selectedNotification.schoolName));
+				  targetPopupId = "notificationPopupNewAppRequestsId";
+				  break;
+			  case 7:
+
+				  if($scope.selectedNotification.schoolName != null && $scope.selectedNotification.schoolName != "")
+					  $scope.selectedNotification.localizedSchoolName = $scope.localize(JSON.parse($scope.selectedNotification.schoolName));
+				  targetPopupId = "notificationPopupSchoolId";
+				  break;
+			  case 8:
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+
+				  targetPopupId = "notificationPopupSupportTeamId";
+				  break;
+			  case 10:  
+
+				  $scope.selectedNotification.userCollapsedNotificationDetails.forEach(function(itm){
+					  itm.localizedName = $scope.localize(itm.firstName) + " " + $scope.localize(itm.middleName) + " " + $scope.localize(itm.lastName);
+				  });
+				  
+				  targetPopupId = "notificationPopupTeacherBehaviorSubmittedId";
+				  break;
+			  case 10:  
+
+				  $scope.selectedNotification.userCollapsedNotificationDetails.forEach(function(itm){
+					  itm.localizedName = $scope.localize(itm.firstName) + " " + $scope.localize(itm.middleName) + " " + $scope.localize(itm.lastName);
+				  });
+				  
+				  targetPopupId = "notificationPopupTeacherBehaviorSubmittedId";
+				  break;
+			  case 11:  
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  
+				  targetPopupId = "notificationPopupLibrarySubmittedId";
+				  break;
+			  case 12:  
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  $scope.selectedNotification.examsLink = '/exam/student-exams.html#/home?studentId=' + $scope.selectedNotification.userHashId;
+				  targetPopupId = "notificationPopupStudentExamId";
+				  break;
+			  case 13:  
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  
+				  targetPopupId = "notificationPopupDiscussionSubmittedId";
+				  break;
+			  case 14:  
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  
+				  targetPopupId = "notificationPopupAnnouncementSubmittedId";
+				  break;
+			  case 15:  
+
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  
+				  targetPopupId = "notificationPopupRoomPublishedId";
+				  break;
+			  case 16:  
+				  
+				  $scope.selectedNotification.localizedName = $scope.localize($scope.selectedNotification.firstName) + " " + $scope.localize($scope.selectedNotification.middleName) + " " + $scope.localize($scope.selectedNotification.lastName);
+				  
+				  targetPopupId = "notificationPopupPollPublishedId";
+				  break;
+			  case 21:
+				 $scope.selectedNotification.userCollapsedNotificationDetails.forEach(function(itm){
+					  itm.localizedName = $scope.localize(itm.firstName) + " " + $scope.localize(itm.middleName) + " " + $scope.localize(itm.lastName);
+				  });
+				  targetPopupId = "notificationPopupTeacherExamId";
+				  break;
+			  default:
+			}
+
+			$scope.getUnreadNotifications(); 
+		}, function(error) {
+			$scope.notificationLoadingFlag = false;
+			/*console.log(error);*/
+		});
+		
+	}
+		
+	$scope.openOnlineApplicationLink = function(lnk){
+		window.open(lnk, '_blank');
+	}
+	
+	$scope.toggleNotificationSidenav = buildSidenavToggler('notificationSidenavId');
+
+    function buildSidenavToggler(componentId) {
+      return function() {
+    	  
+		if($scope.notificationsViewed == false){
+			$scope.getNotificationsByUser();
+		}
+		
+        $mdSidenav(componentId).toggle();
+        if($('body').hasClass('body-backdrop')){
+        	$('body').removeClass('body-backdrop')
+        }else{
+        	$('body').addClass('body-backdrop')
+        }
+      };
+    }
+    
+    //notificationPopupGradesSubmittedId
+    //notificationPopupAttendanceSubmittedId
+    //notificationPopupBehaviorSubmittedId
+    //notificationPopupNewAppRequestsId
+    //notificationPopupApprovedAssessmentsId
+    //notificationPopupSupportTeamId
+    //notificationPopupSchoolId
+    $scope.openNotificationPopup = function(id, ev){
+	    $mdDialog.show({
+			contentElement: "#" + id,
+			parent: angular.element(document.body),
+			targetEvent: ev,
+			clickOutsideToClose: false,
+			escapeToClose: false,
+			fullscreen: $scope.customFullscreen, // Only for -xs, -sm breakpoints.
+			parent : angular.element('body')
+		});
+    }
+    
+    $scope.closeNotificationPopup = function(){
+	    $mdDialog.hide();
+    }
+    	
+	    $scope.localize = function (item) {
+	        if (item != undefined) {
+	            //$('html').attr('lang', $location.search().lang);
+	            $('html').attr('lang', getParameterByName('lang', document.location.href));
+	            if ($('html').attr('lang') == 'en')
+	                return item.en;
+	            if ($('html').attr('lang') == 'ar' || $('html').attr('lang') == 'tur')
+	                return item.ar;
+	            if ($('html').attr('lang') == 'fr')
+	                return item.fr;
+	            return item.en;
+	        }
+	    };
+	    
+		$scope.trustAsHtml = function(string) {
+			if(string != undefined && string != null)
+				string = string.replace(/(?:\r\n|\r|\n)/g, '<br />');
+		return $sce.trustAsHtml(string);
+		};
+});
+
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+//angular.bootstrap($('#master-header'), ['masterHeaderApp']);

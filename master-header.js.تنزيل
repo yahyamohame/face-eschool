@@ -1,0 +1,110 @@
+/*******************************************************************************
+ * Master Header
+ ******************************************************************************/
+$(document).on('click', '.master-header .connect-apps-button', function() {
+	$('.apps-list').toggleClass('active');
+});
+
+$(document).on('click', '.master-header .connect-reports-button', function() {
+	$('.reports-list').toggleClass('active');
+});
+
+$(document).on('click', '.master-header .agenda-reports', function() {
+	$('.agenda-reports-list').toggleClass('active');
+});
+
+$(document).on('click', '.master-header .apps-icon', function() {
+	$('.apps-list').toggleClass('active');
+});
+
+
+$(document).on('click', '.master-header .notifications-icon', function() {
+	$('.notifications-list').toggleClass('active');
+});
+
+$(document).on('click', '.master-header .account img', function() {
+	$('.account-list').toggleClass('active');
+});
+
+$(document).on('click', '.master-header .more-tools-icon', function() {
+	$('.more-tools-menu').toggleClass('active');
+});
+
+$(document).click( function(event) {
+	if ((!$('.master-header .apps').is(event.target))
+			&& ($('.master-header .apps').has(event.target).length === 0)) {
+		$('.master-header .apps-list').removeClass('active');
+	}
+	
+	if ((!$('.master-header .reports').is(event.target))
+			&& ($('.master-header .reports').has(event.target).length === 0)) {
+		$('.master-header .reports-list').removeClass('active');
+	}
+	
+	if ((!$('.master-header .agenda-reports').is(event.target))
+			&& ($('.master-header .agenda-reports').has(event.target).length === 0)) {
+		$('.master-header .agenda-reports-list').removeClass('active');
+	}
+	
+	if ((!$('.master-header .notifications').is(event.target))
+			&& ($('.master-header .notifications').has(
+					event.target).length === 0)) {
+		$('.master-header .notifications-list').removeClass(
+				'active');
+	}
+	if ((!$('.master-header .account').is(event.target))
+			&& ($('.master-header .account').has(event.target).length === 0)) {
+		$('.master-header .account-list').removeClass('active');
+	}
+	/*
+	 * if ($('.shadow-overlay').is(event.target)) {
+	 * $('.more-tools-menu').removeClass('active'); }
+	 */
+});
+
+$(document).on('click', '.more-tools-menu .more-tools-menu-close', function() {
+	$('.more-tools-menu').removeClass('active');
+});
+
+$(document).on('click', '.notifications .notifications-item .notifications-link', function() {
+	$('.notifications').find('.notifications-list').removeClass('active');
+});
+
+/*$('.notifications .notifications-list ul').slimScroll({
+	height : '400px',
+	color : '#777777',
+	railColor : '#e4e4e4',
+	railOpacity : 1,
+	railVisible : true,
+	alwaysVisible : false,
+	size : '4px',
+	distance : '2px'
+});*/
+
+$(document).on('click', '.mobile-master-header .apps-icon', function() {
+	$('.apps-list-page').addClass('active');
+	$('.content').hide();
+});
+
+/*$('.mobile-master-header .apps-list-page').slimScroll({
+	height : '100%',
+	color : '#777777',
+	railColor : '#e4e4e4',
+	railOpacity : 1,
+	railVisible : true,
+	alwaysVisible : false,
+	size : '4px',
+	distance : '2px'
+});*/
+
+$(document).on('click', '.mobile-master-header .notifications-icon', function() {
+	$('.notifications-list-page').addClass('active');
+	$('.content').hide();
+});
+
+$(document).on('click', '.mobile-master-header .sub-header .page-over-close', function() {
+	$('.apps-list-page').removeClass('active');
+	$('.notifications-list-page').removeClass('active');
+	$('.content').show();
+});
+

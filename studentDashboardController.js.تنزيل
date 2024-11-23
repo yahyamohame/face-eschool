@@ -1,0 +1,863 @@
+userMainApp.service('postsService', function($http, $cookies) {
+	
+	return {
+		
+		getUserPublishedPosts: function(lastPostHashId) {
+			return $http.post('/connect/webservice/post/getUserPublishedPosts', {lastPostHashId: lastPostHashId}, {
+        		headers: {
+        			'Authorization': 'Bearer ' + $cookies.get('tkn')
+        		}
+        	});
+		},
+		addPostComment: function(postComment) {
+			return $http.post('/connect/webservice/post/addPostComment', {
+				postComment: postComment
+			}, {
+				headers: {
+					'Authorization': 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+		getPostCommentsList: function(postHashId, postCommentHashId) {
+			return $http.post('/connect/webservice/post/getPostCommentsList', {
+				postHashId: postHashId, 
+				postCommentHashId:postCommentHashId
+			}, {
+				headers: {
+					'Authorization': 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+		getPostReactionsList: function(postHashId) {
+			return $http.post('/connect/webservice/post/getPostReactionsList', {
+				postHashId: postHashId
+			}, {
+				headers: {
+					'Authorization': 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+		addPostReaction: function(postReaction) {
+			return $http.post('/connect/webservice/post/addPostReaction', {
+				postReaction: postReaction
+			}, {
+				headers: {
+					'Authorization': 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+		deletePostReaction: function(postHashId) {
+			return $http.post('/connect/webservice/post/deletePostReaction', {
+				postHashId: postHashId
+			}, {
+				headers: {
+					'Authorization': 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+		saveUnSavePost: function(postHashId, savePostFlag){
+			return $http.post('/connect/webservice/post/saveUnSavePost',{
+				postHashId: postHashId,
+				savePostFlag: savePostFlag
+			},{
+				headers: {
+					'Authorization': 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+		pinUnPinPost: function(postHashId, pinPostFlag){
+			return $http.post('/connect/webservice/post/pinUnPinPost',{
+				postHashId: postHashId,
+				pinPostFlag: pinPostFlag
+			},{
+				headers: {
+					'Authorization': 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+		showMedia: function(attachHashId, previewOnline){
+			return $http.post('/connect/webservice/post/showMedia',{
+				attachHashId: attachHashId,
+				previewOnline: previewOnline
+			},{
+				headers: {
+					'Authorization': 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+        getSchoolProfile: function() { 
+        	return  $http.post('/connect/webservice/post/getSchoolProfile', {},{
+				headers : {
+					'Authorization' : 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+        }
+	};
+});
+
+userMainApp.filter('trustHtml',function($sce){
+	  return function(html){
+	    return $sce.trustAsHtml(html)
+	  }
+});
+
+
+userMainApp.directive("scroll", function ($window) {
+    return function(scope, element, attrs) {
+      
+        angular.element($window).bind("scroll", function() {
+            scope.$apply();
+        });
+    };
+});
+
+
+userMainApp.directive('linkify', ['$timeout', function ($timeout) {
+    return {
+        restrict: 'A',
+        replace: true,
+        link: function (scope, element, attrs) {
+            var linkify = function (text) {
+                if (text) {
+                    text = text.replace(
+                        /((https?\:\/\/)|(www\.))(\S+)(\w{2,4})(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/gi,
+                        function (url) {
+                            var full_url = url;
+                            if (!full_url.match('^https?:\/\/')) {
+                                full_url = 'http://' + full_url;
+                            }
+                            return '<a target="_blank" href="' + full_url + '">' + url + '</a>';
+                        }
+                    );
+                }
+                return text;
+            };
+
+            $timeout(function () {
+                element.html(linkify(element.text()));
+            });
+        }
+    };
+}]);
+
+userMainApp.directive('onError', function() {
+	return {
+		restrict:'A',
+		link: function(scope, element, attr) {
+			element.on('error', function() {
+				var origSrc = element.attr('data');
+				var timeout, attempsCount = 0;
+
+				element.attr('src', attr.onError);
+
+				function reload() {
+					attempsCount = attempsCount + 1;
+
+					timeout = setTimeout(function () {
+
+						var newImg = new Image;
+						newImg.onload = function () {
+							element.attr('src', this.src);
+							clearTimeout(timeout);
+						}
+						newImg.onerror = function () {
+							reload();
+						}
+						newImg.src = origSrc;
+
+					}, 1000);
+
+				}
+
+				//reload();
+
+			})
+		}
+	}
+});
+
+userMainApp.controller('studentDashboardController', function($window, $sce, $scope, $cookies, $http, $location, $timeout, $mdDialog, $filter, $anchorScroll, postsService) {
+	
+	$scope.showallMenuPositionMode = "target-right";
+	
+    if ($scope.selectedLanguage.value == 'ar' || $scope.selectedLanguage.value == 'kur') {
+        $scope.showallMenuPositionMode = "target-left";
+    }
+    
+    moment.locale($scope.selectedLanguage.value);
+    $scope.showInteractionAndCommentPermmissionSetting = false;
+
+	$scope.postManagementLoadingFlag = false;
+	$scope.showReactionPopup = false;
+	$scope.$parent.loadingNotification = false;
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	  
+
+  	  $scope.postList = [];
+  	  $scope.todayDate = {};
+  	  $scope.currentUserLogged = {};
+  	  
+  	  $scope.postLoadingFlag = false;
+  	  $scope.postUsersPopupLoadingFlag = false;
+  	  $scope.postErrorLoadingFlag = false;
+  	
+  	  $scope.pageNumber = 0;
+  	  $scope.pageSize = 15;
+  	
+  	  $scope.enableComments = true;
+  	  $scope.enableInteractions = true;
+  	  $scope.totalPostsCount = 0;
+  	  
+  	  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  	  	$scope.schoolProfile = null;
+  	  	
+  	  	$scope.getSchoolProfile = function(){
+  	  		
+  			postsService.getSchoolProfile().then(function(resp){
+  	  			
+  				$scope.schoolName = $scope.localize(resp.data.schoolName);
+
+  				// school profile check
+                var schoolProfileImg = new Image;
+                schoolProfileImg.onload = function () { 
+      				$scope.schoolProfile = this.src;
+                }
+                schoolProfileImg.onerror = function () {
+                }
+                schoolProfileImg.src = resp.data.schoolProfile;
+
+  				// school logo check
+                var schoolLogoImg = new Image;
+                schoolLogoImg.onload = function () { 
+      				$scope.schoolLogo = this.src;
+                }
+                schoolLogoImg.onerror = function () {
+                }
+                schoolLogoImg.src = resp.data.schoolLogo;
+  				
+  	  		}, function(err){
+  	  			
+  	  		});
+  	  	}
+
+  	  $scope.getSchoolProfile();
+  	  
+  	  $scope.getUserPublishedPosts = function() {
+   		 
+   		 $scope.postLoadingFlag = true;
+  		 $scope.postErrorLoadingFlag = false;
+   		 
+   		 let lastPostHashId = $scope.postList.length > 0 ? $scope.postList[$scope.postList.length - 1].postHashId : null;
+   		 
+   		 postsService.getUserPublishedPosts(lastPostHashId).then(function(resp){
+   			 
+   			 $scope.todayDate = resp.data.todayDate != null ? resp.data.todayDate : $scope.todayDate;
+   			 $scope.currentUserLogged = resp.data.currentUser != null ? resp.data.currentUser : $scope.currentUserLogged;
+   			 $scope.totalPostsCount = lastPostHashId == null ? resp.data.totalPostsCount : $scope.totalPostsCount;
+   		  	 $scope.enableComments = resp.data.enableComments;
+   		  	 $scope.enableInteractions = resp.data.enableInteractions;
+   		  	 
+   			 
+   			  if(!resp.data.acknowledgement){
+   				  $scope.postLoadingFlag = false;
+   				  return;
+   			  }
+   			  
+   			  
+   			  $scope.postList = $scope.postList.concat(resp.data.postList);
+   			  $scope.initPost($scope.postList);
+   			   	  		
+   			  
+   			  $scope.postLoadingFlag = false;
+   			
+   			  if (!$scope.$$phase)
+   	 	        	$scope.$apply();
+   			  
+   		  }, function(err){
+  			  $scope.postLoadingFlag = false;
+  			  $scope.postErrorLoadingFlag = true;
+   		  });
+   	  }
+  	  
+  	  $scope.getUserPublishedPosts();
+  	  
+  	  ///////////////////////////////////////////////////////////////////////////////////// Post Comment Management
+  	  
+  	  $scope.addPostComment = function(post){
+  		  
+  		  if(post.addPostCommentLoader)
+  			  return;
+
+  		 post.addPostCommentLoader = true;
+  		 
+  		  
+  		  if(!post.allowComments || post.postComment.text == ''){
+  			 post.addPostCommentLoader = false;
+  			 return;
+  		  }
+  		  
+  		  post.postComment.postHashId = post.postHashId;
+  		  
+  		  postsService.addPostComment(post.postComment).then(function(resp){
+  			  
+  			  $scope.todayDate = resp.data.todayDate != null ? resp.data.todayDate : $scope.todayDate;
+  			  post.addPostCommentLoader = false;
+  			  
+  			 if(!resp.data.acknowledgement){
+  				 post.postComment.addPostCommentErrorFlag = true;
+  				 return;
+  			 }
+  			  
+  			 post.postComment.text = "";
+  			 post.postComment.addPostCommentErrorFlag = false;
+  			 post.commentsCount +=1;
+  			 post.comments.unshift(resp.data.postComment);
+  			 
+  			  if (!$scope.$$phase)
+  	 	        	$scope.$apply();
+  			  
+  		  }, function(err){
+  			  post.postComment.addPostCommentErrorFlag = true;
+  			  post.addPostCommentLoader = false;
+  		  });
+  	  }
+  	  
+  	 $scope.getPostCommentsList = function(post){ 		 
+ 		  
+ 		  if(post.loadAllCommentsLoadingFlag)
+ 			  return;
+  		 
+ 		  post.loadAllCommentsLoadingFlag = true;
+ 		   
+ 		  let postCommentLastId = post.comments.length == 1 ? null : post.comments[post.comments.length-1].postCommentHashId;
+ 		  
+ 		  postsService.getPostCommentsList(post.postHashId, postCommentLastId).then(function(resp){
+ 			  
+ 			  $scope.todayDate = resp.data.todayDate != null ? resp.data.todayDate : $scope.todayDate;
+ 			  post.commentsCount = postCommentLastId == null ? resp.data.commentsCount : post.commentsCount;
+ 			  
+ 			  if(!resp.data.acknowledgement){
+ 				  post.loadAllCommentsLoadingFlag = false;
+ 				  return;
+ 			  }
+ 			  
+ 			  
+ 			  
+ 			  if(post.comments.length == 1)
+ 				 post.comments = [];
+
+ 			  post.comments =  post.comments.concat(resp.data.postCommentList);
+ 			  $scope.initPostComment(post.comments);
+ 			  post.loadAllCommentsLoadingFlag = false;
+ 			    			  
+ 		  }, function(err){
+ 			  post.loadAllCommentsLoadingFlag = false;
+ 		  });
+ 		  
+ 	  }
+ 	  
+	  $scope.seeLessPostComments = function(post){  
+		  post.comments = [post.comments[0]];
+		  $scope.initPostComment(post.comments);
+		  
+	  }
+  	  
+  	  ///////////////////////////////////////////////////////////////////////////////////// Post Reaction Management
+  	  
+	  $scope.postReactionManagement = function(post, reactionType) {
+  		  if(post.updateInteractionLoading)
+  			  return;
+
+  		  if(!post.userReactionType || post.userReactionType != reactionType)
+  			  $scope.addPostReaction(post, reactionType ? reactionType : 1);
+  		  else
+  			  $scope.deletePostReaction(post);
+  	  }
+  	  
+	  $scope.addPostReaction = function(post, reactionType){
+  		  
+  		  if(!$scope.enableInteractions || !post.allowInteractions)
+  			  return;
+  		  
+  		  post.updateInteractionLoading = true;
+  		  
+  		  let userReactionTypeTemp = post.userReactionType;
+  		  $scope.initPostInteractions(post, reactionType);
+  		  
+  		  let postReaction = {};
+  		  postReaction.reactionType = reactionType;
+  		  postReaction.postHashId = post.postHashId;
+  		  
+  		  postsService.addPostReaction(postReaction).then(function(resp){
+  			  
+  			  $scope.todayDate = resp.data.todayDate != null ? resp.data.todayDate : $scope.todayDate;
+  			  
+  			  if(!resp.data.acknowledgement){
+  				  $scope.initPostInteractions(post, userReactionTypeTemp);
+  				  post.updateInteractionLoading = false;
+  				  return;
+  			  }
+
+  		
+  			  $scope.initPostInteractions(post, resp.data.postReaction.reactionType);
+  			  post.updateInteractionLoading = false;
+  			  			  
+  		  }, function(err){
+  			  $scope.initPostInteractions(post, userReactionTypeTemp);
+  			  post.updateInteractionLoading = false;
+  		  });
+  	  }
+	  
+  	  $scope.initPostInteractions = function(post, userInteraction){
+
+		  
+  		  	if(post.userReactionType != undefined){
+				  let previousUserReactionCount =  post.reactionCountList.filter(reaction => reaction.type == post.userReactionType)[0];
+	  			  if(previousUserReactionCount){
+	  				  previousUserReactionCount.count -= 1;
+	  			  } 
+			  }
+  		  	
+			  if(userInteraction == undefined) {
+					 
+				  post.userReactionType = userInteraction;
+				  post.reactionCountTotal -= 1;
+				  
+	  			  let reactionBundleText = '';
+	  			  post.reactionTextBundle =	$filter('translate')(reactionBundleText);
+				  
+				  if (!$scope.$$phase)
+		 	        	$scope.$apply();
+				  return;
+			  }
+			  
+			  let newestUserReactionCount =  post.reactionCountList.filter(reaction => reaction.type == userInteraction)[0];
+			  if(newestUserReactionCount){
+				  newestUserReactionCount.count += 1;
+			  }else{
+				  let reactionCount = {};
+				  reactionCount.type = userInteraction;
+				  reactionCount.count = 1;
+				  post.reactionCountList.push(reactionCount);
+			  }
+			  
+			  if(post.userReactionType == null)
+				  post.reactionCountTotal += 1;
+			
+			  post.userReactionType = userInteraction;
+			  
+			  let reactionBundleText = $scope.postInteractionTypeList.filter(reaction => reaction.type == post.userReactionType)[0].bundle;
+			  post.reactionTextBundle =	$filter('translate')(reactionBundleText);
+			  
+			  if (!$scope.$$phase)
+ 	        	$scope.$apply();
+		  
+	  }
+	  
+  	  $scope.deletePostReaction = function(post){
+  		  post.updateInteractionLoading = true;
+  		  		  
+  		  postsService.deletePostReaction(post.postHashId).then(function(resp){
+  			  	
+  			  $scope.todayDate = resp.data.todayDate != null ? resp.data.todayDate : $scope.todayDate;
+  			  
+  			  if(!resp.data.acknowledgement){
+  				 return;
+  			  }
+  			  
+  			  let previousUserReactionCount = $filter('filter')( post.reactionCountList, {type: post.userReactionType}, true)[0];
+  			  if(previousUserReactionCount){
+  				  previousUserReactionCount.count -= 1;
+  				  post.reactionCountTotal -= 1;
+  			  }
+  			 
+  			  post.userReactionType = null;
+  			  post.updateInteractionLoading = false; 
+  		  }, function(err){
+  			  post.updateInteractionLoading = false; 
+  		  });
+  	  }
+  	  
+  	  $scope.openUsersPostInteractions = function(post, event) { 
+
+  		  if(post.updateInteractionLoading)
+  			  return;
+  		  
+  		  $scope.postInteractionsLoading = true;
+  		  
+  		  postsService.getPostReactionsList(post.postHashId).then(function(resp){
+  			  
+  			  $scope.todayDate = resp.data.todayDate != null ? resp.data.todayDate : $scope.todayDate;
+  			  $scope.selectedPost = post;
+  			  $scope.selectedPost.reactionCountList = [];
+  			  $scope.selectedPost.reactionCountTotal = 0;
+
+  			  if(!resp.data.acknowledgement){
+  				  $scope.postInteractionsLoading = false;
+				  return;
+			  }
+  			  
+  			  $scope.selectedPost.reactions = resp.data.postReactionList;
+  			  $scope.postInteractionTypeList.forEach(function(reaction){
+  				  
+  				  if(reaction.type != 0) {
+  					  $scope.selectedPost.reactionCountList.push({
+  						  'value': reaction.value,
+  						  'type': reaction.type,
+  						  'count': reaction.type != 0 ? $filter('filter')( $scope.selectedPost.reactions, {reactionType: reaction.type}, true).length :  $scope.selectedPost.reactions.length,					  
+  					  }); 
+  				  }
+  			  });
+  			  
+  			  $scope.selectedPost.showAllButton = $filter('filter')( $scope.selectedPost.reactionCountList, {count: 0}, true).length == $scope.selectedPost.reactionCountList.length - 1 ? false : true;
+  			  $scope.selectedPost.reactionCountTotal = $scope.selectedPost.reactions.length;
+  			  
+  			  if($scope.selectedPost.showAllButton){
+  			  		$scope.filterUsersPostInteractionsByType(0);
+  			  		
+  			  }
+  			  else{
+					let reactionNoZeroCount =  $scope.selectedPost.reactionCountList.filter(react => react.count > 0)[0];
+					$scope.filterUsersPostInteractionsByType(reactionNoZeroCount.type);
+  			  }
+
+  	  		  $scope.postInteractionsLoading = false;
+  	  		  
+  			  if (!$scope.$$phase)
+	 	        	$scope.$apply();
+  			  
+  		  }, function(err){
+  	  		  $scope.postInteractionsLoading = false;
+  		  });
+
+          $mdDialog.show({
+             contentElement: '#usersPostInteractionsDialoge',
+             parent: angular.element(document.body),
+             targetEvent: event,
+             clickOutsideToClose: false,
+             escapeToClose: false,
+             fullscreen: $scope.customFullscreen, // Only for -xs, -sm
+													// breakpoints.
+             parent: angular.element('body')
+         });
+  	  }
+  	  
+  	  $scope.filterUsersPostInteractionsByType = function(interactionType) {
+  		
+  		  $scope.postInteractionsLoading = true;
+  		  
+  		  if($scope.postInteractionType == interactionType){
+  			  $scope.postInteractionsLoading = false;
+  			  return;
+  		  }
+  		  
+  		  $scope.postInteractionType = interactionType;
+  		  let postInteractionObject =  $filter('filter')( $scope.postInteractionTypeList, {type: interactionType}, true)[0];
+  		  
+  		  $scope.postInteractionFilteredByTypeList = [];
+  		  if(!postInteractionObject){
+  			  $scope.postInteractionsLoading = false;
+  			  return;
+  		  }
+  		  
+  		  $scope.postInteractionFilteredByTypeList = postInteractionObject.type == 0 ? angular.copy($scope.selectedPost.reactions) : angular.copy($filter('filter')( $scope.selectedPost.reactions, {reactionType: postInteractionObject.type}, true));
+  		  $scope.postInteractionsLoading = false;
+  	  }
+  	  
+  	  
+  	  $scope.closeUsersPostInteractionsDialogue = function() {
+  		  $scope.selectedPost = {};
+  		  $scope.postInteractionType = -1;
+  		  $scope.postInteractionFilteredByTypeList = [];
+  		  $scope.hideDialog();
+  	  }
+
+  	 ///////////////////////////////////////////////////////////////////////////////////// Post Save/Pin Management
+  	  
+  	  $scope.save_UnSavePost = function(post) {
+  		  
+  		  let savePostFlag = !post.postSaved;
+  		  
+  		  postsService.saveUnSavePost(post.postHashId, savePostFlag).then(function(resp){
+  			  
+  			  $scope.todayDate = resp.data.todayDate != null ? resp.data.todayDate : $scope.todayDate;
+  			  
+  			 if(!resp.data.acknowledgement){
+  				 return;
+  			 }
+  			  
+  			  post.postSaved = savePostFlag;
+  			  if (!$scope.$$phase)
+  	 	        	$scope.$apply();
+  			  
+  		  }, function(err){
+  		  });
+  	  } 
+  	  
+  	  $scope.pin_UnPinPost = function(post) {
+
+  		  let pinPostFlag = !post.postPinned;
+  		  
+  		  postsService.pinUnPinPost(post.postHashId, pinPostFlag).then(function(resp){
+  			  
+  			  $scope.todayDate = resp.data.todayDate != null ? resp.data.todayDate : $scope.todayDate;
+  			  
+  			 if(!resp.data.acknowledgement){
+  				 return;
+  			 }
+
+  			 $scope.postList = [];
+  			 $scope.totalPostsCount = 0;
+  			 $scope.getUserPublishedPosts();
+  
+  			 if (!$scope.$$phase)
+  	 	       		$scope.$apply();
+  			  
+  		  }, function(err) {
+  			
+  		  });
+  		  
+  	  }
+  	  
+  	  
+  	  ///////////////////////////////////////////////////////////////////////////////////// init function part 
+
+  	  // Initiate each post of postList
+  	  $scope.initPost = function(postList){
+  		  
+  		  if(!postList)
+  			  return;
+  	
+  		  postList.forEach(function(post, index){
+  		
+  			  let reactionBundleText = $filter('filter')($scope.postInteractionTypeList, {type: post.userReactionType}, true)[0].bundle; 
+  			  post.reactionTextBundle =	$filter('translate')(reactionBundleText);	
+  			  
+  			  $scope.makePostTextEllipsis(post, 5, 340);
+
+  			  post.loadAllCommentsLoadingFlag = false;
+  			  
+  			  post.reactionCountTotal = 0;
+  			  
+  			  if(post.reactionCountList){
+  				  post.reactionCountList.forEach(function(react){				  
+  					  post.reactionCountTotal += react.count;
+  				  });
+  			  }
+  			  
+  			  if(post.comments.length > 0){
+  				  $scope.initPostComment(post.comments);
+  			  }
+  		});  
+  	  };
+  	  
+  	  
+  	$scope.makePostTextEllipsis = function(post, lineNumber, charsNumber){
+		  post.postTextellipsis = post.text.split("\n").length > lineNumber  ||  post.text.length >= charsNumber ? true : false;
+		  post.showTextSeeLessMoreFlag = false;
+  	}
+	  
+	  
+	  $scope.initPostComment = function(postCommentList) {
+		  
+		  if(!postCommentList || postCommentList.length == 0)
+			  return;
+		  
+		  postCommentList.forEach(function(comment){
+			  
+			  comment.commentTextellipsis = comment.text.split("\n").length > 1  ||  comment.text.length >= 51 ? true : false;
+			  comment.showTextSeeMoreFlag = comment.commentTextellipsis;
+		  });
+	  }
+	  
+	  ///////////////////////////////////////////////////////////////////////////////////// Gallery
+  	  
+  	  $scope.openGallery = function(post, index){
+  		  
+		  if(post.postAttachments.length == 0) 
+			  return
+				
+	   		let galleryItems = [];
+	     	post.postAttachments.forEach(function(attach){
+	     		let videoContent = '<iframe width="100%" height="100%" id="video-' + attach.attachHashId + '" src=""></iframe>' + '<a href="'+ attach.downloadLink +'" class="md-button gslide-download-button"> <span style="display: none" class="gslide-download-icon" ></span></a>';
+	     		let imgContent = '<img width="100%" height="100%" id="img-' + attach.attachHashId + '" src="' + attach.s3AttachThumbImage + '"/>' + '<a href="'+ attach.downloadLink +'" class="md-button gslide-download-button"> <span style="display: none" class="gslide-download-icon" ></span></a>';
+	     		
+	     		let galleryItem = attach.mimeTypeVideo ? {'content': videoContent} : {'content': imgContent, 'width': null, 'height': null};
+	     		galleryItems.push(galleryItem);
+	     	});
+	     	 
+	     	post.myLightbox = GLightbox({ 
+	     	  elements: galleryItems,
+	     	  draggable: false,
+	     	});
+    	     	
+			$('.gslide-download-icon').hide();
+
+	     	post.myLightbox.on('slide_before_change', ({prev, current}) => {
+	     		
+				$('.gslide-download-icon').hide();
+				
+	     		let prevAttach = post.postAttachments[prev.slideIndex];
+
+	     		if(prevAttach.mimeTypeVideo){
+	     			let videoDomId = "video-"+prevAttach.attachHashId; 
+		     		document.getElementById(videoDomId).contentWindow.location.reload();
+	     		}
+
+	     		const { slideIndex, slideNode, slideConfig, player, trigger } = current;
+	     		let attach = post.postAttachments[slideIndex];
+	     		
+	      		if(attach.mediaUrl){
+	      			
+	      			$scope.updateGalleryDomAndUrlPhotosAndVideos(post, attach, attach.mediaUrl);
+	      			return;
+	      		}
+	     		
+	   		  	postsService.showMedia(attach.attachHashId, false).then(function(resp){
+	   		  		
+	   		  		$scope.updateGalleryDomAndUrlPhotosAndVideos(post, attach, resp.data.mediaUrl);
+     	  		}, function(err){
+     	  			
+     	  		});
+	     	});
+		     
+  		  
+	  		post.myLightbox.openAt(index);
+	  		let attach = post.postAttachments[index];
+	  		
+	  		if(attach.mediaUrl){
+	  			$scope.updateGalleryDomAndUrlPhotosAndVideos(post, attach, attach.mediaUrl);
+	  			return;
+	  		}
+	  		
+	  		postsService.showMedia(attach.attachHashId, false).then(function(resp){  
+	  	  			$scope.updateGalleryDomAndUrlPhotosAndVideos(post, attach, resp.data.mediaUrl); 
+	  		}, function(err){
+	  			
+	  		});
+  	  }
+  	  
+  	  $scope.updateGalleryDomAndUrlPhotosAndVideos = function(post, attach, mediaUrl) { 
+  			attach.mediaUrl = mediaUrl;
+  			
+  			if(attach.mimeTypeVideo){
+  				let videoDomId = "video-"+attach.attachHashId; 
+  				document.getElementById(videoDomId).src = 'videoPreview.html?src=' + mediaUrl + '&name=SampleVideo_1280x720_1mb.mp4&videoType=application/x-mpegURL';
+  			}else{
+  				let imgDomId = "img-"+attach.attachHashId;
+  				document.getElementById(imgDomId).parentElement.parentElement.className = "gslide-media gslide-image";
+  				document.getElementById(imgDomId).src =  mediaUrl;
+  			}
+  			
+  			setTimeout(function(){
+				$('.gslide-download-icon').show();
+			}, 500);
+  	  }
+  	  
+  	///////////////////////////////////////////////////////////////////////// post documents
+	
+	$scope.openPostDocuments = function(_post, ev) {
+		
+		if(!_post.postDocuments || _post.postDocuments.length == 0)
+			return;
+		 
+		$scope.attachmentsList = _post.postDocuments;
+		
+		$mdDialog.show({
+            contentElement: '#postDocumentsDialogue',
+            parent: angular.element(document.body),
+            targetEvent: ev,
+            clickOutsideToClose: false,
+            escapeToClose: false,
+            fullscreen: $scope.customFullscreen, // Only for -xs, -sm breakpoints.
+		});	 
+	}
+	
+	$scope.closePostDocumentsPopup = function() {
+		$scope.attachmentsList = [];
+		$scope.hideDialog();
+	}
+    
+	$scope.postDownloadFile = function (downloadLink, fileName, mimeType) {
+	    var element = document.createElement('a');
+	    element.setAttribute('href', downloadLink);
+	    element.setAttribute('download', fileName);
+
+	    element.style.display = 'none';
+	    document.body.appendChild(element);
+
+	    element.click();
+
+	    document.body.removeChild(element);
+		//saveAs(downloadLink, fileName);  
+	}
+
+	$scope.postShowMedia = function (attachHashId) {
+        var mediaWindow = window.open("/mediaLoading.html", "_blank");
+  
+	   	postsService.showMedia(attachHashId, false).then(function(resp){
+	  		
+	        mediaWindow.location.href = resp.data.mediaUrl; 
+  		}, function(err){
+  			
+  		});
+	}
+ 	
+   /////////////////////////////////////////////////////////////////////////////////////
+  	  
+  	  $scope.postInteractionTypeList = [
+  		  
+  		  {'value': 'all', 		 'type': 0},
+  		  {'value': 'Like', 	 'type': 1, 'bundle': 'cnpostreactionlike'},
+  		  {'value': 'Love This', 'type': 2, 'bundle': 'cnpostreactionlovethis'},
+  		  {'value': 'Celebrate', 'type': 4,  'bundle': 'cnpostreactioncelebrating'},
+  		  {'value': 'Excellent!','type': 5, 'bundle': 'cnpostreactionexcellent'},
+  		  {'value': 'Inspiring', 'type': 3,  'bundle': 'cnpostreactioninspiring'},
+  		  {'value': 'Thank You', 'type': 6,  'bundle': 'cnpostreactionthankyou'}
+  		  
+  	  ];
+  	  
+  	  $scope.getItemLifeTime = function(creationDate) {
+		  if(!creationDate)
+			  return;
+  		  
+  		return moment(new Date(creationDate.year, creationDate.month, creationDate.day, creationDate.hour, creationDate.minutes, creationDate.seconds)).from(moment(new Date($scope.todayDate.year, $scope.todayDate.month, $scope.todayDate.day, $scope.todayDate.hour, $scope.todayDate.minutes, $scope.todayDate.seconds)));  
+  	  }
+ 
+      $scope.kFormatter = function(num) {
+         return Math.abs(num) > 999 ? Math.sign(num)*((Math.abs(num)/1000).toFixed(1)) + 'k' : Math.sign(num)*Math.abs(num);
+      }
+      
+    	$scope.getGreetingTime = function(m) {
+    		var g = null; //return g
+    		var gOptions = [{"ar":"مساء الخير","en":"Good afternoon","fr":"Bon après-midi"},
+    		                {"ar":"مساء الخير","en":"Good evening","fr":"Bonsoir"},
+    		                {"ar":"صباح الخير","en":"Good morning","fr":"Bonjour"}];
+    		
+    		if(!m || !m.isValid()) { return; } //if we can't find a valid or filled moment, we return.
+    		
+    		var split_afternoon = 12 //24hr time to split the afternoon
+    		var split_evening = 17 //24hr time to split the evening
+    		var currentHour = parseFloat(m.format("HH"));
+    		
+    		if(currentHour >= split_afternoon && currentHour <= split_evening) {
+    			g = $scope.localize(gOptions[0]);
+    		} else if(currentHour >= split_evening) {
+    			g = $scope.localize(gOptions[1]);
+    		} else {
+    			g = $scope.localize(gOptions[2]);
+    		}
+    		
+    		return g;
+    	}
+      	  
+      	  	$scope.greetingMessage = $scope.getGreetingTime(moment());
+      	  	
+  	  	$scope.postRetry = function() {
+  		
+	  	  $scope.getSchoolProfile();
+	  	  $scope.getUserPublishedPosts();
+    	}
+});

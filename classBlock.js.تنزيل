@@ -1,0 +1,6 @@
+function classBlockSelect2Initialize() {
+	$('.classes-select2 select').select2({
+		placeholder : 'Choose Class'
+	});
+};
+classBlockSelect2Initialize();

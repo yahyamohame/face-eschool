@@ -1,0 +1,208 @@
+var mainApp = angular.module('mainApp', ['ngCookies', 'ui.slimscroll']);
+
+mainApp.service('mainService', function($http,$cookies) { 
+	return {
+		getMetaData: function() { 
+        	return  $http.post('/webservice/eschool/mainWebService/getMetaData', {},{
+				headers : {
+					'Authorization' : 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+        }
+	}
+});
+
+var sessionInfo;
+var userImageURL;
+var defaultUserImage;
+var userFullName;
+var userType;
+var userPermissions;
+var teacherType;
+var teachers;
+var isAdministrative;
+
+var accessToFeesPage;
+var justifyAbsence;
+var accessToAttendancePage;
+var accessToBehaviorPage;
+var selectStudentsWhoTakeCourse;
+var sendMessageToStudents;
+var sendMessageToParents;
+var sendMessageToTeachers;
+var allowMessageReply;
+var allowGroupConversation;
+var mediaUploadService;
+var resumableUploadService;
+var processingCheckService;
+var resumableUploadEnabled;
+var schoolsGroupAvailable;
+var allowAccessToSchoolInbox;
+var allowTeacherToManagePolls;
+var allowAccessToRequestType;
+var teacherTypeList;
+
+var canDeleteMessages;
+var canDeleteReceivedMessages;
+var canSendVoiceNote;
+var mainTodayDate;
+
+var healthFileEnabled;
+var healthFileFromDate;
+var healthFileToDate;
+
+var personalInfoEnabled;
+var personalInfoFromDate;
+var personalInfoToDate;
+
+var enableDocuments;
+
+var restrictedSystemLanguages;
+
+var allowTeacherToAccessPublisherResources;
+
+/***** Main Controller *****/
+mainApp.controller('mainController', 
+		function ($scope, $filter, $http, $window, $timeout, $interval, $location, $cookies,mainService) {
+	 
+ 	$scope.languages = [{'title': 'English', value: 'en'}, {'title': 'Français', value: 'fr'}, {'title': 'Turkish', value: 'tur'}, {'title': 'العربية', value: 'ar'}/*, {'title': 'كوردى', value: 'kur'}*/];
+   
+	$scope.getMetaData = function() {
+						
+		mainService.getMetaData().then(function(resp){
+			sessionInfo = resp.data.sessionInfo;
+			userImageURL = resp.data.userImageURL;
+			defaultUserImage = resp.data.defaultUserImage;
+			userFullName = resp.data.userFullName;
+			userType = resp.data.userType;
+			userPermissions = (resp.data.userPermissions == null || resp.data.userPermissions == "") ? [] : JSON.parse(resp.data.userPermissions);
+			teacherType = resp.data.teacherType;
+			isAdministrative = resp.data.isAdministrative;
+			
+			accessToFeesPage = resp.data.accessToFeesPage;
+			justifyAbsence = resp.data.justifyAbsence;
+			accessToAttendancePage = resp.data.accessToAttendancePage;
+			accessToBehaviorPage = resp.data.accessToBehaviorPage;
+			selectStudentsWhoTakeCourse = resp.data.selectStudentsWhoTakeCourse;
+			sendMessageToStudents = resp.data.sendMessageToStudents;
+			sendMessageToParents = resp.data.sendMessageToParents;
+			sendMessageToTeachers = resp.data.sendMessageToTeachers;
+			allowMessageReply = resp.data.allowMessageReply;
+			allowGroupConversation = resp.data.allowGroupConversation;
+			teachers = resp.data.teachers;
+			mediaUploadService = resp.data.mediaUploadService;
+			resumableUploadService = resp.data.resumableUploadService;
+			processingCheckService = resp.data.processingCheckService;
+			resumableUploadEnabled = resp.data.resumableUploadEnabled;
+			allowAccessToSchoolInbox = resp.data.allowAccessToSchoolInbox;
+			allowTeacherToManagePolls = resp.data.allowTeacherToManagePolls;
+			allowAccessToRequestType = resp.data.allowAccessToRequestType;
+			healthFileEnabled = resp.data.healthFileEnabled;
+			healthFileLocalEnabled = healthFileEnabled;
+			healthFileFromDate = resp.data.healthFileFromDate;
+			healthFileToDate = resp.data.healthFileToDate;
+			
+			personalInfoEnabled = resp.data.personalInfoEnabled;
+			personalInfoLocalEnabled = personalInfoEnabled;
+			personalInfoFromDate = resp.data.personalInfoFromDate;
+			personalInfoToDate = resp.data.personalInfoToDate;
+			
+			enableDocuments = resp.data.enableDocuments;
+			
+			teacherTypeList = resp.data.teacherTypeList;
+			
+			schoolsGroupAvailable = resp.data.schoolsGroupAvailable;
+			
+			canDeleteMessages = resp.data.canDeleteMessages;
+			canDeleteReceivedMessages = resp.data.canDeleteReceivedMessages;
+			canSendVoiceNote = resp.data.canSendVoiceNote;
+			mainTodayDate = resp.data.todayDate;
+			
+			restrictedSystemLanguages = resp.data.restrictedSystemLanguages;
+			
+			allowTeacherToAccessPublisherResources = resp.data.allowTeacherToAccessPublisherResources;
+			
+
+			var url = $location.path().split('/');
+			$scope.currentView = url[1];
+			
+			var appName = 'userMainApp';
+			var controllerName = resp.data.controllerName;
+			var templateName = resp.data.templateName;
+			
+			$http.get(templateName)
+				  .then(function(response) {
+					
+					$("#cntr").append(
+						'<div id="' + appName + '" ng-controller="' + controllerName + '">'+
+						'</div>'
+					);
+					
+			        var dom = $(response.data); 
+			        $('#' + appName).html(dom);
+			        dom.filter('script').each(function(){
+			            $.globalEval(this.text || this.textContent || this.innerHTML || '');
+			        });
+			 });
+			
+			
+			$('body').show();
+		},function(err){
+			if(err.status == 401)
+				window.location.href = '/account';
+		});
+	}
+	
+	$scope.getMetaData();
+	
+});
+
+function isMyScriptLoaded(url) { 
+    if (!url) url = "http://xxx.co.uk/xxx/script.js";
+    var scripts = document.getElementsByTagName('script');
+    for (var i = scripts.length; i--;) {
+        if (scripts[i].src.indexOf(url) != -1) return true;
+    }
+    return false;
+}
+
+function loadScript(path) {
+
+	  if(!isMyScriptLoaded(path)){  
+		  var result = $.Deferred(),
+		  
+		  script = document.createElement("script");
+		  script.async = "async";
+		  script.type = "text/javascript";
+		  script.src = path;
+		  script.onload = script.onreadystatechange = function (_, isAbort) {
+		      if (!script.readyState || /loaded|complete/.test(script.readyState)) {
+		         if (isAbort)
+		             result.reject();
+		         else
+		            result.resolve();
+		    }
+		  };
+		  script.onerror = function () { result.reject(); };
+		  document.querySelector("head").appendChild(script);
+		  return result.promise(); 
+	  }
+}
+
+function loader(arrayName){
+
+  return {
+    load: function($q){
+              var deferred = $q.defer(),
+              map = arrayName.map(function(name) {
+                  return loadScript(name);
+              });
+
+              $q.all(map).then(function(r){
+                  deferred.resolve();
+              });
+
+              return deferred.promise;
+      }
+  };
+}

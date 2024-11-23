@@ -1,0 +1,1345 @@
+var agendaPageParams = window.location.search;
+
+if(agendaPageParams == null || agendaPageParams == "")
+	agendaPageParams = "?t=" + Date.now();
+else
+	agendaPageParams = agendaPageParams + "&t=" + Date.now();
+
+var commonHeaderTemplate = 
+		'<link rel="stylesheet" ' +
+		'href="master-header/css/connect-master-header.css?v=2024.08.26.2" /> ' +
+		'<link rel="stylesheet" ' +
+		'href="master-header/css/material-override.css?v=9.2.0" /> ' +
+		'<script src="master-header/js/jquery.slimscroll.min.js"></script> ' +
+		'<script src="master-header/js/angular-slimscroll.js"></script> ' +
+		'<script src="master-header/js/saver.js"></script> ' +
+		
+		'<style>' +
+			'.master-header {'+
+	 		'	padding: 0px 20px;'+
+ 			'	z-index: 103;'+
+ 			'}'+
+ 			'.master-header .master-header-logo {'+
+ 			'	margin: 10px 0;'+
+ 			'}'+
+ 			'.master-header .master-header-tools .apps {'+
+ 			'	margin: 13px 10px;'+
+ 			'	float: right;'+
+ 			'}'+
+ 			'[lang="ar"] .master-header .master-header-tools .apps {'+
+ 			'	float: left;'+
+ 			'}'+
+ 			'.master-header .master-header-tools .apps .apps-icon {'+
+ 			'	height: 26px;'+
+ 			'	background: url(/resources/connect/images/icons.png?v=9.2.0)  no-repeat -754px -254px;'+
+ 			'}'+
+ 			'.master-header .master-header-tools .notifications {'+
+ 			'	margin: 13px 10px;'+
+ 			'	float: right;'+
+ 			'}'+
+ 			'[lang="ar"] .master-header .master-header-tools .notifications {'+
+ 			'	float: left;'+
+ 			'}'+
+ 			'.master-header .master-header-tools .notifications .notifications-icon {'+
+ 			'	width: 26px;'+
+ 			'	height: 26px;'+
+ 			'	background: url(/resources/connect/images/icons.png?v=9.2.0)  no-repeat -780px -228px;'+
+ 			'	outline: none;'+
+ 			'}'+
+ 			'.master-header .master-header-tools .notifications .notifications-icon .notifications-number {'+
+ 			'    top: -7px;'+
+ 			'    right: -8px;'+
+ 			'    font-size: 8px;'+
+ 			'    background: #f73740;'+
+ 			'    padding: 3px 6px;'+
+ 			'	box-shadow: 0px 1px 3px #444;'+
+ 			'    width: auto !important;'+
+ 			'    height: auto !important;'+
+ 			'    line-height: normal !important;'+
+ 			'    font-weight: bold;'+
+ 			'    text-indent: 0;'+
+ 			'}'+
+ 			'[lang="ar"] .master-header .master-header-tools .notifications .notifications-icon .notifications-number,'+
+ 			'[lang="kur"] .master-header .master-header-tools .notifications .notifications-icon .notifications-number {'+
+ 			'    left: -8px;'+
+ 			'}'+
+ 			'.master-header .master-header-tools .account {'+
+ 			'	 margin: 8px 0 8px 10px;'+
+ 			'    float: right;'+
+ 			'}'+
+ 			'[lang="ar"] .master-header .master-header-tools .account {'+
+ 			'	 margin: 8px 10px 8px 0;'+
+ 			'    float: left;'+
+ 			'}'+
+ 			'.see-all{'+
+ 			'    color: #1da1f2;'+
+ 			'}'+
+		'</style>' +
+		
+		'<div id="master-header" ng-app="masterHeaderApp" ng-controller="headerController" ng-cloak="">'+
+			'<div class="master-header clearfix {{appName}}" ng-class="{\'teacher\' : userType == 2}" > ' +
+				'<div class="master-header-logo"> ' +
+					'<span ng-if="appName == \'gradebook\'" class="side-menu-btn"></span> ' +
+					'<span ng-if="appName == \'exam\'" class="side-menu-btn"></span> ' +
+					'<span ng-if="appName == \'analytics\'" class="side-menu-btn"></span> ' +
+					'<span ng-if="appName == \'agenda\'" onclick="angular.element(document.getElementById(\'agenda\')).scope().toggleSidenav()" class="side-menu-btn"></span> ' +
+					'<a href="" onclick="angular.element(document.getElementById(\'userMainApp\')).scope().switchPage(\'home\')"> <img ng-src="{{appLogo}}" onerror="this.src = \'/resources/connect/images/logo-header.png\';"></img> ' +
+					'</a> ' +
+				'</div> ' +
+		
+				'<div > ' +
+										
+					'<div class="master-header-tools" ' +
+						'ng-if="userType != undefined" ' +
+						'ng-if="appName != \'registration\'"> ' +
+						'<div class="account"> ' +
+							'<img ng-src="{{profileImagePathURL}}" data="{{profileImagePathURL}}" profile-on-error="{{defaultProfileImage}}"></img> ' +
+							'<div class="account-list"> ' +
+								'<ul> ' +
+									'<li><a href="/account/profile.html" class="user-profile-link"> ' +
+											'<img ng-src="{{profileImagePathURL}}" data="{{profileImagePathURL}}" profile-on-error="{{defaultProfileImage}}"><div class="username-container"><p title="{{fullName}}">{{fullName}}</p><p class="user-role" title="{{userTypeTitle}}">{{userTypeTitle}}</p></div><span class="edit-button"><span class="edit-icon"></span></span> ' +
+									'</a></li> ' +
+									'<li><a class="setting-link" style="cursor: pointer" ng-if="(userPermissions.length != 0 &amp;&amp; userPermissions.indexOf(1) != -1 || teacherType == 1 || allowAccessToSettings)" ' +
+											'onclick="window.open(\'/settings-admin.html'+ window.location.search +'\')"> ' +
+											'<span></span>{{\'settings\' | translate}}' +
+									'</a></li> ' +
+									'<li><a href="" class="logout-link" ng-click="logout()"> ' +
+											'<span></span>{{\'logout\' | translate}}' +
+									'</a></li> ' +
+								'</ul> ' +
+							'</div> ' +
+						'</div> ' +
+						'<div ng-if="appName != \'settings-admin\' &amp;&amp; appName != \'userreport-admin\' &amp;&amp; appName != \'blacklisteduserreport-admin\' &amp;&amp; appName != \'banneduserreport-admin\' &amp;&amp; appName != \'pollreport-admin\'" class="notifications active" ' +
+							'ng-class="{\'new-notifications\': newNotifications, \'active\': unreadNotifications > 0}"> ' +
+							'<div class="notifications-icon" ng-click="toggleNotificationSidenav()" > ' +
+								'<span class="notifications-number ng-cloak" ' +
+									'ng-if="unreadNotifications > 0" ' +
+									'ng-bind="unreadNotifications"></span> ' +
+							'</div> ' + 
+						'</div> ' +
+						
+						'<div class="apps new-apps" ng-show="appName == \'\'"> ' +
+							'<md-button class="connect-apps-button new-apps">' +
+					        	'<span class="apps-new-icon"></span>' +
+					        	'<span>{{\'eschoolapps\' | translate}}</span>' +
+					        '</md-button>' +
+							'<div class="apps-list"> ' +
+								'<span class="app-title">{{\'eschoolapps\' | translate}}</span>' +
+								'<ul> ' +
+									'<li onclick="window.open(\'/'+ window.location.search +'\')"><span class="connect-icon"></span> ' +
+										'<h4>{{\'connect\' | translate}}</h4></li> ' +
+									'<li ng-show="userType == 2" ng-if="appName != \'analytics\'" ' +
+										'onclick="window.open(\'/analytics'+ agendaPageParams +'\')"> ' +
+										'<span class="analytics-icon"></span> ' +
+										'<h4>{{\'analytics\' | translate}}</h4></li> ' +
+									'<li ng-show="userType == 2" ng-if="appName != \'gradebook\'" ' +
+										'onclick="window.open(\'/gradebook/'+ window.location.search +'\')"> ' +
+										'<span class="gradebook-icon"></span> ' +
+										'<h4>{{\'gradebook\' | translate}}</h4> ' +
+									'</li> ' +
+									'<li ng-if="appName != \'agenda\'" ' +
+										'onclick="window.open(\'/agenda/'+ agendaPageParams +'\')"> ' +
+										'<span class="agenda-icon"></span> ' +
+										'<h4>{{\'agenda\' | translate}}</h4> ' +
+									'</li> ' +
+									'<li ng-show="userType == 2" ng-if="appName != \'exam\'" ' +
+									'onclick="window.open(\'/exam/'+ agendaPageParams +'\')">' +
+									'<span class="exams-icon"></span> ' +
+									'<h4>{{\'exam\' | translate}}</h4></li> ' +
+									'<li ng-show="userType == 0 || userType == 1" ng-if="appName != \'exam\'" ' +
+									'onclick="window.open(\'/exam/student-exams.html'+ agendaPageParams +'\')"> ' +
+									'<span class="exams-icon"></span> ' +
+									'<h4>{{\'exam\' | translate}}</h4></li> ' +
+									'<li  ng-if="(userPermissions.length != 0 &amp;&amp; userPermissions.indexOf(2) != -1 || teacherType == 1) &amp;&amp; appName != \'driver\'" ' +
+										'onclick="window.open(\'/driver/safety-admin.xhtml'+ window.location.search +'\')"> ' +
+										'<span class="safety-icon"></span> ' +
+										'<h4>{{\'safety\' | translate}}</h4></li> ' +
+									'<li ng-if="appName != \'yearBook\'" ' +
+										'onclick="window.open(\'/yearbook/index.html'+ window.location.search +'\')"> ' +
+										'<span class="yearbook-icon"></span> ' +
+										'<h4>{{\'yearbook\' | translate}}</h4> ' +
+									'</li> ' +
+									'<li ng-if="false" ' +
+										'ng-click="openHighlightsLibrary()"> ' +
+										'<span class="highlights-icon"></span> ' +
+										'<h4>{{\'highlights\' | translate}}</h4> ' +
+									'</li> ' +
+								'</ul> ' +
+								
+								'<span class="set-default-app-title" ng-click="showUserDefaultAppPopup($event)">Select Default App' +
+									'<span class="info-icon">' +
+										'<span class="tooltip-info">Enhance your experience by selecting a preferred app for effortless direct login, ensuring a seamless and quick access to your account.</span>' +
+									'</span>' +
+								'</span>' +
+								
+							'</div> ' +
+						'</div> ' +
+						
+						'<div class="apps" ng-show="appName != \'\'"> ' +
+					        '<span class="apps-icon"></span>' +
+							'<div class="apps-list"> ' +
+								'<span class="app-title">{{\'eschoolapps\' | translate}}</span>' +
+								'<ul> ' +
+									'<li onclick="window.open(\'/'+ window.location.search +'\')"><span class="connect-icon"></span> ' +
+										'<h4>{{\'connect\' | translate}}</h4></li> ' +
+									'<li ng-show="userType == 2" ng-if="appName != \'analytics\'" ' +
+										'onclick="window.open(\'/analytics'+ agendaPageParams +'\')"> ' +
+										'<span class="analytics-icon"></span> ' +
+										'<h4>{{\'analytics\' | translate}}</h4></li> ' +
+									'<li ng-show="userType == 2" ng-if="appName != \'gradebook\'" ' +
+										'onclick="window.open(\'/gradebook/'+ window.location.search +'\')"> ' +
+										'<span class="gradebook-icon"></span> ' +
+										'<h4>{{\'gradebook\' | translate}}</h4> ' +
+									'</li> ' +
+									'<li ng-if="appName != \'agenda\'" ' +
+										'onclick="window.open(\'/agenda/'+ agendaPageParams +'\')"> ' +
+										'<span class="agenda-icon"></span> ' +
+										'<h4>{{\'agenda\' | translate}}</h4> ' +
+									'</li> ' +
+									'<li ng-show="userType == 2" ng-if="appName != \'exam\'" ' +
+									'onclick="window.open(\'/exam/'+ agendaPageParams +'\')">' +
+									'<span class="exams-icon"></span> ' +
+									'<h4>{{\'exam\' | translate}}</h4></li> ' +
+									'<li ng-show="userType == 0 || userType == 1" ng-if="appName != \'exam\'" ' +
+									'onclick="window.open(\'/exam/student-exams.html'+ agendaPageParams +'\')"> ' +
+									'<span class="exams-icon"></span> ' +
+									'<h4>{{\'exam\' | translate}}</h4></li> ' +
+									'<li  ng-if="(userPermissions.length != 0 &amp;&amp; userPermissions.indexOf(2) != -1 || teacherType == 1) &amp;&amp; appName != \'driver\'" ' +
+										'onclick="window.open(\'/driver/safety-admin.xhtml'+ window.location.search +'\')"> ' +
+										'<span class="safety-icon"></span> ' +
+										'<h4>{{\'safety\' | translate}}</h4></li> ' +
+									'<li ng-if="appName != \'yearBook\'" ' +
+										'onclick="window.open(\'/yearbook/index.html'+ window.location.search +'\')"> ' +
+										'<span class="yearbook-icon"></span> ' +
+										'<h4>{{\'yearbook\' | translate}}</h4> ' +
+									'</li> ' +
+								'</ul> ' +
+							'</div> ' +
+						'</div> ' +
+						
+						'<div class="reports new-apps" ng-show="appName == \'\' &amp;&amp; (allowAccessToUserReport || allowAccessToReportCard || allowAccessToBannedUserReport || allowAccessToBlackListedUserReport || allowAccessToSmsReport || allowAccessToPollReport || allowAccessToAttendanceReport || allowAccessToApplicationReport || allowAccessToEmploymentReport || allowAccessToDocumentReport || allowAccessToRequestReport || allowAccessToFormsRequestReport)"> ' +
+								'<md-button class="connect-reports-button new-apps">' +
+					        		'<span class="reports-icon"></span>' +
+					        		'<span>{{\'reports\' | translate}}</span>' +
+					        	'</md-button>' +
+							'<div class="reports-list"> ' +
+								'<ul> ' +
+									'<li ng-if="allowAccessToUserReport" onclick="window.open(\'/userReport-admin.html'+'\')"><span class="user-report"></span> ' +
+										'<h4>{{\'userreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToReportCard" onclick="window.open(\'/reportCard-admin.html' +'\')"><span class="report-card"></span> ' +
+										'<h4>{{\'reportcard\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToBannedUserReport" onclick="window.open(\'/bannedUserReport-admin.html' +'\')"><span class="banned-users"></span> ' +
+										'<h4>{{\'banneduserreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToBlackListedUserReport" onclick="window.open(\'/blackListedUserReport-admin.html' +'\')"><span class="blacklisted-students"></span> ' +
+										'<h4>{{\'blacklisteduserreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToSmsReport" onclick="window.open(\'/smsReport-admin.html' +'\')"><span class="sms-report"></span> ' +
+										'<h4>{{\'smsreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToAttendanceReport" onclick="window.open(\'/teacherAttendanceReport-admin.html' +'\')"><span class="teacher-attendance-report"></span> ' +
+										'<h4>{{\'attendancereport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToPollReport" onclick="window.open(\'/pollReport-admin.html' +'\')"><span class="poll-report"></span> ' +
+										'<h4>{{\'pollreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToApplicationReport" onclick="window.open(\'/applicationReport-admin.html' +'\')"><span class="registration-report"></span> ' +
+										'<h4>{{\'applicationreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToEmploymentReport" onclick="window.open(\'/employmentReport-admin.html' +'\')"><span class="employment-report"></span> ' +
+										'<h4>{{\'employmentreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToDocumentReport" onclick="window.open(\'/documentsReport-admin.html' +'\')"><span class="documents-report"></span> ' +
+										'<h4>{{\'documentreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToRequestReport" onclick="window.open(\'/requestsReport-admin.html' +'\')"><span class="requests-report"></span> ' +
+										'<h4>{{\'requestreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+									'<li ng-if="allowAccessToFormsRequestReport" onclick="window.open(\'/formsRequestsReport-admin.html' +'\')"><span class="forms-report"></span> ' +
+										'<h4>{{\'formsrequestreport\' | translate}}</h4><span class="blue-next-arrow"></span></li> ' +
+										
+								'</ul> ' +
+							'</div> ' +
+						'</div> ' +
+						
+					'</div> ' +
+				'</div> ' +
+			'</div> ' +
+			'<md-sidenav class="md-sidenav notification-sidenav" mode="over" fixedInViewport="true" ' +
+				'ng-class="{\'md-sidenav-right\' : selectedLanguage.value == \'en\' || selectedLanguage.value == \'fr\',\'md-sidenav-left\' : selectedLanguage.value == \'ar\'}" ' +
+				'md-component-id="notificationSidenavId" md-whiteframe="4" md-disable-close-events="" md-disable-backdrop="">' +
+				'<div class="header">' +
+		        	'<h1>{{\'cnnotificationsnotifications\' | translate}}</h1>' +
+		        	'<md-button ng-disabled="loadingNotification" onclick="$(\'.notifications-icon\').click()" class="md-button-only-icon">' +
+		        		'<span class="icon-x-blue"></span>' +
+		        	'</md-button>' +
+		        '</div>' +	
+	      		'<md-content ' +
+	      			'slimscroll="{height : \'calc(100% - 84px)\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+	      			'<div class="block-loader" ng-show="loadingData">' +
+						'<div class="blocker"></div>' +
+						'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+					'</div> ' +
+					'<div class="empty-notif" ng-if="usersNotifications.length == 0 &amp;&amp; !loadingData">' +
+						'<img src="master-header/images/notifications/empty-notif.png"></img>' +
+					'</div>' +
+	      			'<div class="notification-container" ng-repeat="not in usersNotifications | orderBy : \'id\':true" ng-class="{\'not-seen\' : !not.seen}" ng-click="getUserCollapsedNotifications(not,$event)">' +
+	      				'<div class="img-container">' +
+	      					'<img ng-src="{{not.imageURL}}" data="{{not.imageURL}}" profile-on-error="{{not.defaultImage}}"></img>' +
+	      					'<span class="notification-type" ng-class="{\'gradebook-notification-type\': [0, 1, 2, 3, 4, 5, 10].includes(not.type), \'exam-notification-type\': [12, 21].includes(not.type), \'discussion-notification-type\': not.type == 13, \'room-notification-type\': not.type == 15, \'poll-notification-type\': not.type == 16}"></span>' +
+	      				'</div>' +
+	      				'<div class="body-container">' +
+      						'<div class="description" text-clamp="2">' +
+      								'<span class="name">{{not.localizedSubject}}</span>' +
+	      							'<span class="details"> {{not.localizedBody}}</span>' +
+	      						/*'<p class="pre-wrap" text-clamp="2">'+*/
+	      						/*'</p>'+*/
+      						'</div>' +
+      						'<div class="date">' +
+      							'{{not.sentDate}} at {{not.sentTime}}' +
+      						'</div>' +
+      						'<div class="to" ng-show="not.localizedRecipient != null">' +
+      							'{{\'cnnotificationsto\' | translate}}: {{not.localizedRecipient}}' +
+      						'</div>' +
+	      				'</div>' +
+	      			'</div>'+
+	      			'<div class="load-more" ng-if="moreNotificationsExist">'+
+		      			'<div class="block-loader" ng-show="loadingData">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-button class="md-button-light-blue" ng-click="getNotificationsByUser()" ng-disabled="loadingData">'+
+							'{{\'cnlaodmore\' | translate}}'+
+					   	'</md-button>'+
+					'</div>'+
+	      		'</md-content>' +
+			'</md-sidenav>' +
+			
+			'<div class="md-dialog-super-container" style="visibility: hidden">' +
+				'<div class="md-dialog-container notification-popup" id="notificationPopupGradesSubmittedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationsgradessubmitted\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" ng-if="!selectedNotification.isBlackListed">' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									 
+									'<span class="no-data-wrapper" ng-if="selectedNotification.isBlackListed">' + 
+									 	'<span class="cannot-view-grades ng-scope"></span>' +
+									 	'<span class="no-data-text ng-binding ng-scope">{{localize(selectedNotification.blackListedMessage)}}</span>' +
+									 '</span>' +
+								 
+									'<div class="notification-popup-body-grades-submitted"  ng-if="!selectedNotification.isBlackListed" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.assessmentName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsassessment\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-row-val">{{localize(itm.notification.assessmentName)}}</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.courseName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationscourse\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-row-val">{{localize(itm.notification.courseName)}}</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.periodName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsperiod\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-row-val">{{localize(itm.notification.periodName)}}</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.description != null &amp;&amp; itm.notification.description != \'\'">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsdescription\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-row-val">{{itm.notification.description}}</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.date != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsdate\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-row-val">{{itm.notification.date}}</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.grade != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsgrade\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-row-val">{{itm.notification.grade}}</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.note != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsnote\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-row-val">{{itm.notification.note}}</span>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+			
+				'<div class="md-dialog-container notification-popup" id="notificationPopupAttendanceSubmittedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationsattendancesubmitted\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" >' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-attendance-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.absenceList.length > 0">' +
+													'<span class="notification-popup-body-item-row-title">{{\'cnnotificationsabsence\' | translate}} </span>' +
+													'<div class="notification-popup-body-item-session" ng-repeat="absItm in itm.notification.absenceList">' +
+														'<span class="notification-popup-body-item-session-label">{{\'cnnotificationssession\' | translate}}: </span>' +
+														'<span class="notification-popup-body-item-session-val">{{absItm.sessionNumber}}</span>' +
+														' {{absItm.courseName != null ? \'|\' : \'\'}} ' +
+														'<span class="notification-popup-body-item-session-label" ng-if="absItm.courseName != null">{{\'cnnotificationscourse\' | translate}}: </span>' +
+														'<span class="notification-popup-body-item-session-val" ng-if="absItm.courseName != null">{{localize(absItm.courseName)}}</span>' +
+													'</div>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.tardinessList.length > 0">' +
+													'<span class="notification-popup-body-item-row-title">{{\'cnnotificationstardiness\' | translate}} </span>' +
+													'<div class="notification-popup-body-item-session" ng-repeat="tarItm in itm.notification.tardinessList">' +
+														'<span class="notification-popup-body-item-session-label">{{\'cnnotificationssession\' | translate}}: </span>' +
+														'<span class="notification-popup-body-item-session-val">{{tarItm.sessionNumber}}</span>' +
+														' {{tarItm.courseName != null ? \'|\' : \'\'}} ' +
+														'<span class="notification-popup-body-item-session-label" ng-if="tarItm.courseName != null">{{\'cnnotificationscourse\' | translate}}: </span>' +
+														'<span class="notification-popup-body-item-session-val" ng-if="tarItm.courseName != null">{{localize(tarItm.courseName)}}</span>' +
+													'</div>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+										 
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+			
+				'<div class="md-dialog-container notification-popup" id="notificationPopupBehaviorSubmittedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationsbehaviorsubmitted\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" >' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-behavior-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.note != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsnote\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.note)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.procedure != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsprocedure\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.procedure)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.courseName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationscourse\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.courseName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.place != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsplace\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.place)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.remark != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsremark\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.remark}}' +
+													'</span>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+			
+				'<div class="md-dialog-container notification-popup" id="notificationPopupLibrarySubmittedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationslibrarysubmitted\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" >' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-behavior-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationscourse\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.courseName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.resourceName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsresource\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.resourceName}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.previewLink != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationspreview\' | translate}}: </span>' +
+													'<a href="{{itm.notification.previewLink}}" target="_blank" class="notification-popup-body-item-val">' +	
+														'{{itm.notification.previewLink}}' +
+													'</a>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.downloadLink != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsdownloadlink\' | translate}}: </span>' +
+													'<a href="{{itm.notification.downloadLink}}" target="_blank" class="notification-popup-body-item-val">' +	
+														'{{itm.notification.downloadLink}}' +
+													'</a>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+			
+				'<div class="md-dialog-container notification-popup" id="notificationPopupDiscussionSubmittedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationdiscussion\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" >' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-behavior-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationroomtitle\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.discussionTitle}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.discussionDate != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationroomduedate\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.discussionDate}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.discussionFromTime != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationroomfromtime\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.discussionFromTime}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.discussionToTime != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationroomtotime\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.discussionToTime}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-label"></span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'<a href="/#!/discussions" target="_blank" ng-if="selectedNotification.studentHashId == null">{{\'cnnotificationopendiscussion\' | translate}}</a>' +
+														'<a href="/#!/studentDiscussions/{{selectedNotification.studentHashId}}" target="_blank" ng-if="selectedNotification.studentHashId != null">{{\'cnnotificationopendiscussion\' | translate}}</a>' +
+													'</span>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+		 
+				'<div class="md-dialog-container notification-popup" id="notificationPopupAnnouncementSubmittedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationsannouncementsubmitted\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" >' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-behavior-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationscourse\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.courseName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.announcementText != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsannouncementtext\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val" ng-bind-html="trustAsHtml(itm.notification.announcementText)" linkify="">' +	 
+													'</span>' +
+												'</div>' +  
+
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+				
+				'<div class="md-dialog-container notification-popup" id="notificationPopupStudentExamId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationsexam\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" >' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-behavior-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsexam\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.examTitle}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.sectionName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsclass\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.sectionName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.courseName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationscourse\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.courseName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.examFromDate != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsfromdate\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.examFromDate}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.examToDate != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationstodate\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.examToDate}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.examDuration != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsduration\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.examDuration}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="selectedNotification.examsLink != null">' +
+													'<span class="notification-popup-body-item-row-label"></span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'<a href="{{selectedNotification.examsLink}}" target="_blank">{{\'cnnotificationsopenexams\' | translate}}</a>' +
+													'</span>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+				
+				'<div class="md-dialog-container notification-popup" id="notificationPopupTeacherExamId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationsexam\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-body-behavior-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row notification-popup-body-submitted-behavior">' +
+													'<img ng-src="{{itm.image}}"></img>' +
+													'<span class="notification-popup-body-item-row-label">{{itm.localizedName}}</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsexam\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.examTitle}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.sectionName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsclass\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.sectionName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.courseName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationscourse\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.courseName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.examFromDate != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsfromdate\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.examFromDate}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.examToDate != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationstodate\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.examToDate}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.examDuration != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsduration\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.examDuration}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.examsLink != null">' +
+													'<span class="notification-popup-body-item-row-label"></span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'<a href="{{itm.notification.examsLink}}" target="_blank">{{\'cnnotificationsopenexams\' | translate}}</a>' +
+													'</span>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+				
+				'<div class="md-dialog-container notification-popup" id="notificationPopupRoomPublishedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationroom\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" >' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-behavior-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationroomtitle\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.roomTitle}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.roomDate != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationroomduedate\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.roomDate}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.roomFromTime != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationroomfromtime\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.roomFromTime}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.roomToTime != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationroomtotime\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{itm.notification.roomToTime}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-label"></span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'<a href="/#!/invitations" target="_blank" ng-if="selectedNotification.studentHashId == null">{{\'cnnotificationopenroom\' | translate}}</a>' +
+														'<a href="/#!/studentInvitations/{{selectedNotification.studentHashId}}" target="_blank" ng-if="selectedNotification.studentHashId != null">{{\'cnnotificationopenroom\' | translate}}</a>' +
+													'</span>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+				
+				'<div class="md-dialog-container notification-popup" id="notificationPopupTeacherBehaviorSubmittedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationsbehaviorsubmitted\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-body-behavior-submitted" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row notification-popup-body-submitted-behavior">' +
+													'<img ng-src="{{itm.image}}"></img>' +
+													'<span class="notification-popup-body-item-row-label">{{itm.localizedName}}</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.studentFirstName != null &amp;&amp; itm.notification.studentMiddleName != null &amp;&amp; itm.notification.studentLastName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsstudent\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.studentFirstName)}} {{localize(itm.notification.studentMiddleName)}} {{localize(itm.notification.studentLastName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.note != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsnote\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.note)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.procedure != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsprocedure\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.procedure)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.courseName != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationscourse\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.courseName)}}' +
+													'</span>' +
+												'</div>' +
+												'<div class="notification-popup-body-item-row" ng-if="itm.notification.place != null">' +
+													'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsplace\' | translate}}: </span>' +
+													'<span class="notification-popup-body-item-val">' +	
+														'{{localize(itm.notification.place)}}' +
+													'</span>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+			
+				'<div class="md-dialog-container notification-popup" id="notificationPopupApprovedAssessmentsId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2 ng-if="selectedNotification.type == 0">{{\'cnnotificationssubmittedassessments\' | translate}}</h2>' +
+								'<h2 ng-if="selectedNotification.type == 1">{{\'cnnotificationsapprovedassessments\' | translate}}</h2>' +
+								'<h2 ng-if="selectedNotification.type == 2">{{\'cnnotificationsrejectedassessments\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div class="notification-popup-header" ng-if="selectedNotification.type == 1 || selectedNotification.type == 2">' +
+									'<img ng-src="{{selectedNotification.image}}"></img>' +
+									'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+								'</div>' +
+								'<div class="notification-popup-body-approved-assessments" ' +
+									'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+									'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+										'<div class="notification-popup-body-date">' +
+											'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+											'<div class="notification-popup-body-date-line"></div>' +
+										'</div>' +
+										'<div class="notification-popup-body-item">' +
+											'<div class="notification-popup-body-item-row notification-popup-body-submitted-assessments" ng-if="selectedNotification.type == 0">' +
+												'<img ng-src="{{itm.image}}"></img>' +
+												'<span class="notification-popup-body-item-row-label">{{itm.localizedName}}</span>' +
+											'</div>' +
+											'<div class="notification-popup-body-item-row" ng-if="itm.notification.assessmentName != null">' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsassessment\' | translate}}: </span>' +
+												'<span class="notification-popup-body-item-row-val">{{localize(itm.notification.assessmentName)}}</span>' +
+											'</div>' +
+											'<div class="notification-popup-body-item-row" ng-if="itm.notification.className != null">' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsclass\' | translate}}: </span>' +
+												'<span class="notification-popup-body-item-row-val">{{localize(itm.notification.className)}}</span>' +
+											'</div>' +
+											'<div class="notification-popup-body-item-row" ng-if="itm.notification.periodName != null">' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsperiod\' | translate}}: </span>' +
+												'<span class="notification-popup-body-item-row-val">{{localize(itm.notification.periodName)}}</span>' +
+											'</div>' +
+											'<div class="notification-popup-body-item-row" ng-if="itm.notification.courseName != null">' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationscourse\' | translate}}: </span>' +
+												'<span class="notification-popup-body-item-row-val">{{localize(itm.notification.courseName)}}</span>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div>' +
+					'</md-dialog-content>' +
+				'</md-dialog>' +
+			'</div>' +
+			
+				'<div class="md-dialog-container notification-popup" id="notificationPopupNewAppRequestsId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{\'cnnotificationsnewapprequests\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+									
+									'<div class="notification-popup-header" >' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedSchoolName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-new-app-requests" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row">' +
+													'<div class="notification-popup-body-item-row-parent">' +
+														'<span class="notification-popup-body-item-row-label">{{\'cnnotificationsparentname\' | translate}}: </span>' +
+														'<span class="notification-popup-body-item-row-val">{{itm.notification.parentName}}</span>' +
+													'</div>' +
+													'<div class="notification-popup-body-item-row-link">' +	
+														'<span class="notification-popup-body-item-row-label">{{\'cnnotificationslink\' | translate}}: </span>' +
+														'<span class="notification-popup-body-item-row-val" ng-click="openOnlineApplicationLink(itm.notification.link)">{{itm.notification.link}}</span>' +
+													'</div>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+			
+					'<div class="md-dialog-container notification-popup" id="notificationPopupSupportTeamId">' +
+						'<md-dialog>' +
+							'<md-toolbar>' +
+								'<div class="md-toolbar-tools">' +
+									'<h2>{{\'cnnotificationseschoolsupportteam\' | translate}}</h2>' +
+									'<span flex=""></span>' +
+								    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+								    	'<span class="icon icon-close-blue"></span>' +
+								    '</md-button>' +
+								'</div>' +
+							'</md-toolbar>' +
+							'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+								'<div class="blocker"></div>' +
+								'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+							'</div> ' +
+							'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+								'<div class="md-dialog-content">' +
+									'<div class="notification-popup-header">' +
+										'<img ng-src="{{selectedNotification.image}}"></img>' +
+										'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+									'</div>' +
+									'<div class="notification-popup-body-support-team" ' +
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+										'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+											'<div class="notification-popup-body-date">' +
+												'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+												'<div class="notification-popup-body-date-line"></div>' +
+											'</div>' +
+											'<div class="notification-popup-body-item">' +
+												'<div class="notification-popup-body-item-row">' +
+													'<span class="notification-popup-body-item-row-text" ng-bind-html="trustAsHtml(itm.notification.message)" linkify="">' +
+													'</span>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+				
+				
+				'<div class="md-dialog-container notification-popup" id="notificationPopupPollPublishedId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +							
+								'<h2>{{\'cnnotificationpolls\' | translate}}</h2>' +
+								'<span flex=""></span>' +
+								'<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+						    		'<span class="icon icon-close-blue"></span>' +
+						    	'</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div>' +
+							
+								'<div class="notification-popup-header">' +
+									'<img ng-src="{{selectedNotification.image}}"></img>' +
+									'<span class="notification-popup-header-title">{{selectedNotification.localizedName}}</span>' +
+								'</div>' +
+								
+								'<div class="notification-popup-body-behavior-submitted" '+
+										'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+									
+									'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+									
+										'<div class="notification-popup-body-date">' +
+											'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+											'<div class="notification-popup-body-date-line"></div>' +
+										'</div>' +
+										
+										'<div class="notification-popup-body-item">' +
+										
+											'<div class="notification-popup-body-item-row">' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationpolltitle\' | translate}}: </span>' +
+												'<span class="notification-popup-body-item-val">{{itm.notification.title}}</span>' +
+											'</div> ' +
+											
+											'<div class="notification-popup-body-item-row">' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationpollfromdate\' | translate}}: </span>' +
+												'<span class="notification-popup-body-item-val">{{itm.notification.fromDate}} </span>' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationpollat\' | translate}} </span>' +
+												'<span class="notification-popup-body-item-val">{{itm.notification.fromTime}}</span>' +
+											'</div> ' +
+											
+											'<div class="notification-popup-body-item-row">' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationpolltodate\' | translate}}: </span>' +
+												'<span class="notification-popup-body-item-val">{{itm.notification.toDate}} </span>' +
+												'<span class="notification-popup-body-item-row-label">{{\'cnnotificationpollat\' | translate}} </span>' +
+												'<span class="notification-popup-body-item-val">{{itm.notification.toTime}}</span>' +
+											'</div> ' +
+											
+											'<div class="notification-popup-body-item-row">' +
+												'<span class="notification-popup-body-item-row-label"></span>' +
+												'<span class="notification-popup-body-item-val">' +	
+													'<a href="/#!/polls" target="_blank" ng-if="selectedNotification.studentHashId == null"> {{\'cnnotificationpollopenpolls\' | translate}}</a>' +
+													'<a href="/#!/studentpolls/{{selectedNotification.studentHashId}}" target="_blank" ng-if="selectedNotification.studentHashId != null">{{\'cnnotificationpollopenpolls\' | translate}}</a>' +
+												'</span>' +
+											'</div> ' +
+										
+										'</div> ' +
+
+									'</div> ' +
+								'</div> ' +
+								'</div>' +
+							'</div> ' +
+						'</md-dialog-content>' +
+					'</md-dialog>' +
+				'</div>' +
+				
+				
+				'<div class="md-dialog-container notification-popup" id="notificationPopupSchoolId">' +
+					'<md-dialog>' +
+						'<md-toolbar>' +
+							'<div class="md-toolbar-tools">' +
+								'<h2>{{selectedNotification.localizedSchoolName}}</h2>' +
+								'<span flex=""></span>' +
+							    '<md-button class="md-button-only-icon" ng-click="closeNotificationPopup()">' +
+							    	'<span class="icon icon-close-blue"></span>' +
+							    '</md-button>' +
+							'</div>' +
+						'</md-toolbar>' +
+						'<div class="block-loader" ng-show="notificationLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								'<div class="notification-popup-header">' +
+									'<img ng-src="{{selectedNotification.image}}"></img>' +
+								'</div>' +
+								'<div class="notification-popup-school-team" ' +
+									'slimscroll="{height : \'350px\',color : \'#777777\',railColor : \'#e4e4e4\',railOpacity : 1,railVisible : true,alwaysVisible : true,size : \'8px\',distance : \'0px\'}">' +
+									'<div class="notification-popup-body" ng-repeat="itm in selectedNotification.userCollapsedNotificationDetails">' +
+										'<div class="notification-popup-body-date">' +
+											'<span class="notification-popup-body-date-val">{{itm.sentDate}} at {{itm.sentTime}}</span>' +
+											'<div class="notification-popup-body-date-line"></div>' +
+										'</div>' +
+										'<div class="notification-popup-body-item">' +
+											'<div class="notification-popup-body-item-row">' +
+												'<p dir="auto" class="notification-popup-body-item-row-text" ng-bind-html="trustAsHtml(itm.notification.message)" linkify="">' +
+												'</p>' +
+											'</div>' +
+										'</div>' +
+									'</div>' +
+								'</div>' +
+							'</div>' +
+						'</div> ' +
+					'</md-dialog-content>' +
+				'</md-dialog>' +				
+				
+				'<div class="md-dialog-container default-app-popup" id="defaultAppSelectorId">' +
+					'<md-dialog>' +
+						'<div class="block-loader" ng-show="defaultAppLoadingFlag">' +
+							'<div class="blocker"></div>' +
+							'<md-progress-circular md-diameter="40px"></md-progress-circular>' +
+						'</div> ' +
+						'<md-dialog-content ng-hide="notificationLoadingFlag">' +
+							'<div class="md-dialog-content">' +
+								
+								'<h2>Select Default App</h2>' +
+								'<p>Enhance your experience by selecting a preferred app for effortless direct login, ensuring a seamless and quick access to your account.</p>' +
+								'<div class="apps-container">' +
+									'<div class="app-container" ng-click="selectedDefaultAppChange(\'/\')" ng-class="{\'selected\' : editedDefaultApp == \'/\'}">' +
+										'<span class="connect-icon icon"></span>' +
+										'<span class="app-name">Connect</span>' +
+									'</div>' +
+									'<div class="app-container" ng-click="selectedDefaultAppChange(\'/analytics\')" ng-class="{\'selected\' : editedDefaultApp == \'/analytics\'}" ng-if="userType == 2">' +
+										'<span class="analytics-icon icon"></span>' +
+										'<span class="app-name">Analytics</span>' +
+									'</div>' +
+									'<div class="app-container" ng-click="selectedDefaultAppChange(\'/gradebook\')" ng-class="{\'selected\' : editedDefaultApp == \'/gradebook\'}" ng-if="userType == 2">' +
+										'<span class="gradebook-icon icon"></span>' +
+										'<span class="app-name">GradeBook</span>' +
+									'</div>' +
+									'<div class="app-container" ng-click="selectedDefaultAppChange(\'/agenda\')" ng-class="{\'selected\' : editedDefaultApp == \'/agenda\'}">' +
+										'<span class="agenda-icon icon"></span>' +
+										'<span class="app-name">Agenda</span>' +
+									'</div>' +
+									'<div class="app-container" ng-click="selectedDefaultAppChange(\'/exam\')" ng-class="{\'selected\' : editedDefaultApp == \'/exam\'}" ng-if="userType == 2">' +
+										'<span class="exams-icon icon"></span>' +
+										'<span class="app-name">Exam</span>' +
+									'</div>' +
+									'<div class="app-container" ng-click="selectedDefaultAppChange(\'/exam/student-exams.html\')" ng-class="{\'selected\' : editedDefaultApp == \'/exam/student-exams.html\'}" ng-if="userType != 2">' +
+										'<span class="exams-icon icon"></span>' +
+										'<span class="app-name">Exam</span>' +
+									'</div>' +
+									'<div class="app-container" ng-click="selectedDefaultAppChange(\'/driver/safety-admin.xhtml\')" ng-class="{\'selected\' : editedDefaultApp == \'/driver/safety-admin.xhtml\'}" ng-if="(userPermissions.length != 0 &amp;&amp; userPermissions.indexOf(2) != -1 || teacherType == 1)">' +
+										'<span class="safety-icon icon"></span>' +
+										'<span class="app-name">Safety</span>' +
+									'</div>' +
+									'<div class="app-container" ng-click="selectedDefaultAppChange(\'/yearbook/index.html\')" ng-class="{\'selected\' : editedDefaultApp == \'/yearbook/index.html\'}">' +
+										'<span class="yearbook-icon icon"></span>' +
+										'<span class="app-name">YearBook</span>' +
+									'</div>' +
+								'</div>' +
+								'<div class="footer">' +
+									'<md-button class="reset-button" ng-click="resetDefaultApp()">' +
+								    	'<span>RESET</span>' +
+								    '</md-button>' +
+									'<md-button class="cancel-button" ng-click="hideUserDefaultAppPopup()">' +
+								    	'<span>CANCEL</span>' +
+								    '</md-button>' +
+								    '<md-button class="save-button md-button-blue" ng-click="updateUserDefaultApp()">' +
+								    	'<span>SAVE</span>' +
+								    '</md-button>' +
+								'</div>' +
+								
+						'</div> ' +
+					'</md-dialog-content>' +
+					
+				'</md-dialog>' +
+			'</div>' +
+		'</div>' +
+			
+		'</div> ' +
+		 
+		'<script src="master-header/js/angular-translate.min.js?v=2021.6.23.2"></script> ' +
+		'<script src="master-header/js/master-header-bundle.js?v=2024.09.18.02"></script> ' +
+		'<script src="master-header/js/connect-master-header-controllers.js?v=2024.08.22.0"></script> ' +
+		'<script src="master-header/js/master-header.js?v=2023.6.15.256"></script>' ;
+	
+$('body').prepend($(commonHeaderTemplate));

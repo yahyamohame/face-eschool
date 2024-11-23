@@ -1,0 +1,351 @@
+function resumableUpload(data, resumable, attachmentsId, uploadedItems, applyFun, saveInLocalStorage, compressed) {
+	if (resumable) {
+		resumableUploadImpl(data, attachmentsId, uploadedItems, applyFun, saveInLocalStorage, compressed);
+	} else {
+		nonResumableUploadSelectedFile(data, attachmentsId, uploadedItems, applyFun, saveInLocalStorage);
+	}
+}
+
+function resumableUploadImpl(data, attachmentsId, uploadedItems, applyFun, saveInLocalStorage, compressed) {
+
+	let id = generateUUID();
+	var r = new Resumable({
+		target: data.uploadService,
+		chunkSize: 1 * 1024 * 1024,
+		simultaneousUploads: 1,
+		testChunks: true,
+		throttleProgressCallbacks: 1,
+		maxChunkRetries: 60,
+		chunkRetryInterval: 1000,
+		method: "octet",
+		serviceType: data.serviceType,
+		X_fileType: data.X_fileType,
+		token: data.token,
+		maxFileSize: 1048576 * 1000,
+	});
+
+	data.file.id = id;
+	data.file.serviceType = data.serviceType;
+	data.file.fileType = data.fileType;
+	data.file.token = data.token;
+	r.addFile(data.file);
+	
+	if (!r.sizeError) {
+		if (compressed == null || !compressed)
+			uploadedItems.push(data);
+		applyFun();
+	}
+
+	var processingCheckService = data.processingCheckService;
+
+	r.on('fileAdded', function(file) {
+		r.opts.GUID = file.file.id;
+		r.opts.encodedFileName = encodeURI(file.fileName);
+		file.file.canceled = false;
+		file.file.retry = false;
+
+		let uploadedItemTemp = data;
+		delete uploadedItemTemp.file;
+
+		file.file.uploadedItem = uploadedItemTemp;
+
+		r.upload();
+	});
+	r.on('pause', function() {
+		// Show resume, hide pause
+	});
+	r.on('complete', function() {
+		// Hide pause/resume when the upload has complete
+	});
+	r.on('fileProgress', function(file) {
+		// Handle progress for both the file and the overall upload
+
+		if (uploadedItems.indexOf(file.file.uploadedItem) != -1) {
+			file.file.uploadedItem.progress = Math.floor(r.progress() * 100);
+			applyFun();
+		} else {
+			r.cancel();
+			file.file.canceled = true;
+		}
+	});
+	r.on('fileSuccess', function(file, message) {
+		// Reflect that the file upload has completed
+		if (message == "Invalid") {
+			r.removeFile(file);
+			return;
+		}
+
+		r.removeFile(file);
+		let uniqueId = file.file.uploadedItem.uniqueId;
+		console.log(123);
+		
+		if (file.file.uploadedItem.fileType.indexOf('video') != -1) {
+			if (uploadedItems != null && uploadedItems.filter(u => u.uniqueId == file.file.uploadedItem.uniqueId).length > 0) {
+				file.file.uploadedItem.compressing = true;
+	
+				applyFun();
+	
+				resumableCompress(file, parseInt(message), uniqueId, processingCheckService, attachmentsId, applyFun, saveInLocalStorage);
+	
+				document.getElementById(file.file.uploadedItem.uniqueId + '-retry').addEventListener("click", function() {
+					resumableCompress(file, parseInt(message), uniqueId, processingCheckService, attachmentsId, applyFun, saveInLocalStorage);
+	
+				});
+	
+			}
+		} else {
+			
+			if (uploadedItems != null && uploadedItems.filter(u => u.uniqueId == file.file.uploadedItem.uniqueId).length > 0) {
+				file.file.uploadedItem.attachId = parseInt(message);
+				attachmentsId.push(parseInt(message));
+				applyFun();
+				saveInLocalStorage();
+			}
+		}
+	});
+	r.on('fileError', function(file, message) {
+		// Reflect that the file upload has resulted in error
+		if (file.file.canceled)
+			return;
+		//document.getElementById(file.file.id + 'delete').style.display = "none";
+		file.file.uploadedItem.faildToSent = true;
+		applyFun();
+		let e = document.getElementById(file.file.uploadedItem.uniqueId + '-retry');
+		if (e) {
+			document.getElementById(file.file.uploadedItem.uniqueId + '-retry').addEventListener("click", function() {
+				file.retry();
+				file.file.uploadedItem.faildToSent = false;
+				applyFun();
+			});
+		}
+	});
+}
+
+function resumableCompress(file, id, uniqueId, processingCheckService, attachmentsId, applyFun, saveInLocalStorage) {
+
+	let e = document.getElementById(file.file.uploadedItem.uniqueId + '-retry');
+	if (e) {
+		file.file.uploadedItem.faildToSent = false;
+		applyFun();
+	}
+	file.savedFile = false;
+
+	$.ajax({
+		url: '' + processingCheckService + '',
+		data: JSON.stringify({
+			'id': id,
+			'serviceType': file.file.serviceType,
+			'fileType': file.file.fileType
+		}), //ur data to be sent to server
+		contentType: "application/json; charset=utf-8",
+		type: "POST",
+		headers: {
+			'Authorization': 'Bearer ' + file.file.token
+		},
+		success: function(resp) {
+			if (resp != null && resp.acknowledgement) {
+				checkResumableCompress(file, id, uniqueId, processingCheckService, attachmentsId, applyFun, saveInLocalStorage);
+
+				let e = document.getElementById(file.file.uploadedItem.uniqueId + '-retry');
+				if (e) {
+					e.addEventListener("click", function() {
+						checkResumableCompress(file, id, uniqueId, processingCheckService, attachmentsId, applyFun, saveInLocalStorage);
+
+					});
+				}
+
+			} else if (resp != null && !resp.acknowledgement) {
+
+				file.file.uploadedItem.compressing = false;
+
+				if (attachmentsId.filter(a => a == id).length == 0)
+					attachmentsId.push(id);
+
+				applyFun();
+				saveInLocalStorage();
+			} else {
+				checkIfRetryResumableCompresing(file, applyFun);
+			}
+		},
+		error: function(err) {
+			checkIfRetryResumableCompresing(file, applyFun);
+		}
+	});
+}
+
+function checkResumableCompress(file, id, uniqueId, processingCheckService, attachmentsId, applyFun, saveInLocalStorage) {
+
+	let e = document.getElementById(file.file.uploadedItem.uniqueId + '-retry');
+	if (e) {
+		file.file.uploadedItem.faildToSent = false;
+		applyFun();
+	}
+	file.savedFile = false;
+
+	$.ajax({
+		url: '' + processingCheckService + '?id=' + id + '&serviceType=' + file.file.serviceType + '&fileType=' + file.file.fileType + '',
+		contentType: "application/json; charset=utf-8",
+		type: "GET",
+		headers: {
+			'Authorization': 'Bearer ' + file.file.token
+		},
+		success: function(resp) {
+			if (resp != null && resp.acknowledgement) {
+
+				file.file.uploadedItem.compressing = false;
+				file.file.uploadedItem.attachId = id;
+				if (attachmentsId.filter(a => a == id).length == 0)
+					attachmentsId.push(id);
+				applyFun();
+				saveInLocalStorage();
+
+				file.savedFile = true;
+			} else if (resp != null && resp.status == 'compressing') {
+				timeout = setTimeout(function() {
+					checkResumableCompress(file, id, uniqueId, processingCheckService, attachmentsId, applyFun, saveInLocalStorage);
+					//clearTimeout(timeout);
+				}, 5000);
+			} else {
+				checkIfRetryCheckResumableCompresing(file, applyFun);
+			}
+		},
+		error: function(err) {
+			checkIfRetryCheckResumableCompresing(file, applyFun);
+		}
+	});
+}
+
+
+
+function checkIfRetryResumableCompresing(file, applyFun) {
+
+	let e = document.getElementById(file.file.uploadedItem.uniqueId + '-retry');
+	if (e) {
+		file.file.uploadedItem.faildToSent = true;
+		applyFun();
+	}
+}
+
+function checkIfRetryCheckResumableCompresing(file, applyFun) {
+	let e = document.getElementById(file.file.uploadedItem.uniqueId + '-retry');
+	if (e) {
+		file.file.uploadedItem.faildToSent = true;
+		applyFun();
+	}
+}
+
+
+var xhrs = [];
+
+function nonResumableUploadSelectedFile(data, attachmentsId, uploadedItems, applyFun, saveInLocalStorage) {
+
+	var maxFileSize = (1048576 * 1000);
+	var file = data.file;
+
+	var xhrsLength = xhrs.length;
+	xhrs[xhrsLength] = new XMLHttpRequest();
+	xhrs[xhrsLength].uniqueId = generateUniqueId();
+
+	var name = file.name;
+	var size = 0;
+	if (file.size > 1048576)
+		size = (Math.round(file.size * 100 / (1048576)) / 100).toString()
+			+ 'MB';
+	else
+		size = (Math.round(file.size * 100 / 1024) / 100).toString() + 'KB';
+
+
+	if (file.size < maxFileSize) {
+
+		var type = file.type;
+
+		applyFun()
+
+		var fd = new FormData();
+		fd.append("fileToUpload", file, encodeURI(name));
+		//fd.append("guid", $scope.guid);
+
+		xhrs[xhrsLength].upload.uploadedItem = data;
+		xhrs[xhrsLength].upload.addEventListener("progress", uploadProgress, false);
+		xhrs[xhrsLength].addEventListener("load", uploadComplete, false);
+		xhrs[xhrsLength].open("POST", data.mediaUploadService);
+		xhrs[xhrsLength].setRequestHeader('X_token', data.token);
+		xhrs[xhrsLength].setRequestHeader('encodedFileName', encodeURI(name));
+		xhrs[xhrsLength].setRequestHeader('X_serviceType', "conversation");
+		xhrs[xhrsLength].send(fd);
+
+		function uploadProgress(evt) {
+			if (evt.lengthComputable) {
+				var percentComplete = Math.round(evt.loaded * 100 / evt.total);
+				if (uploadedItems.indexOf(this.uploadedItem) != -1) {
+					var uploadedItemIndex = uploadedItems.indexOf(this.uploadedItem);
+					uploadedItems[uploadedItemIndex].progress = percentComplete;
+					uploadedItems[uploadedItemIndex].progressCircle = (((100 - percentComplete) / 100) * (Math.PI * (18 * 2)));
+					applyFun()
+				}
+
+			}
+		}
+
+		function uploadComplete() {
+			for (var j = 0; j < xhrs.length; j++) {
+				if (xhrs[j].uniqueId == this.uniqueId) {
+					if (xhrs[j].readyState === xhrs[j].DONE) {
+						if (xhrs[j].status === 200) {
+							var attachId = JSON.parse(xhrs[j].response).uploadedAttachmentsId;
+							attachmentsId.push(attachId[0]);
+							var uploadedItemIndex = uploadedItems.indexOf(this.upload.uploadedItem);
+							uploadedItems[uploadedItemIndex].attachId = attachId[0];
+							applyFun()
+							saveInLocalStorage();
+						}
+					}
+				}
+			}
+		}
+	}
+	else {
+		var faildMsg = '(faild) [' + name + '] size is greater than 1 GB';
+		var uploadedItem = {
+			uniqueId: xhrs[xhrsLength].uniqueId,
+			name: faildMsg,
+			size: size,
+			fileType: file['type'],
+			progress: 0,
+			progressCircle: (((100 - 0) / 100) * (Math.PI * (18 * 2))),
+			attachId: 0,
+			temporaryThumbnail: file['temporaryThumbnail'],
+			sent: false,
+			successfull: false,
+			faildToSent: true,
+			localPath: window.URL.createObjectURL(file)
+		};
+		uploadedItems.push(uploadedItem);
+
+		applyFun()
+	}
+
+}
+
+function generateUniqueId() {
+	var time = new Date().getTime();
+	while (time == new Date().getTime())
+		;
+	return new Date().getTime();
+}
+
+function generateUUID() { // Public Domain/MIT
+	var d = new Date().getTime();//Timestamp
+	var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now() * 1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+		var r = Math.random() * 16;//random number between 0 and 16
+		if (d > 0) {//Use timestamp until depleted
+			r = (d + r) % 16 | 0;
+			d = Math.floor(d / 16);
+		} else {//Use microseconds since page-load if supported
+			r = (d2 + r) % 16 | 0;
+			d2 = Math.floor(d2 / 16);
+		}
+		return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+	});
+}

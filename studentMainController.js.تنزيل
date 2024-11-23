@@ -1,0 +1,1051 @@
+var userMainApp = angular.module('userMainApp', ['ngCookies', 'pascalprecht.translate', 'ngRoute','ui.slimscroll', 'percentCircle-directive', 'ngSanitize', 'ui.select2', 'ngMaterial', 'ngTextareaEnter']);
+	
+var messagesContactsResponseCache = null;
+var contactsResponseCache = null;
+var teacherCoursesCache = null;
+
+/** *** Bundle **** */
+userMainApp.config(function($translateProvider, $controllerProvider, $filterProvider, $provide, $compileProvider) {
+	$translateProvider.translations('en', connect_en).translations('ar',
+			connect_ar).translations('fr', connect_fr).translations('tur', connect_tur);
+
+	$translateProvider.preferredLanguage('en');
+	
+	/*Creating a more synthesized form of service of $ controllerProvider.register*/
+	userMainApp.registerController = $controllerProvider.register;
+
+	userMainApp.registerService = $provide.factory;
+	
+	userMainApp.registerFilter = $filterProvider.register;
+	
+	userMainApp.registerDirective = $compileProvider.directive;
+	
+});
+
+/***** Routing *****/
+userMainApp.config(function ($routeProvider) {
+    $routeProvider
+
+    // route for the home page
+    .when('/home', {
+        templateUrl: 'partial/layout/studentHome.html?v3=2023.12.19.0',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentDashboardController'
+    })
+    .when('/mysavedposts', {
+    	templateUrl: '/partial/post/mySavedPosts.html?v3=2023.12.19.0',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'userSavedPostsManagementController',
+        resolve: loader(['/resources/connect/post/js/userSavedPostsController.js?v3=2023.12.19.0'])
+    })
+    .when('/studentCourseEvaluationGrade', {
+        templateUrl: 'partial/evaluationGrades/studentCourseEvaluationGrade.html?v3=2023.23.0.0',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentCourseEvaluationGradeController',
+        resolve: loader(['/resources/connect/evaluationGrades/studentCourseEvaluationGradeController.js?v3=2023.23.0.0'])
+    })
+    .when('/objective', {
+        templateUrl: 'partial/objective/studentObjective.html?v3=2024.02.29.04',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentObjectiveController',
+        resolve: loader(['/resources/connect/objective/studentController.js?v3=2024.02.29.04'])
+    })
+    .when('/librarysharedresources', {
+        templateUrl: 'partial/library/studentLibrarySharedResources.html?v3=2024.09.06.02',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentLibrarySharedResourcesController',
+        resolve: loader(['/resources/connect/library/studentLibrarySharedResourcesController.js?v3=2022.12.16.0'])
+    })
+    .when('/librarynotviewedresources', {
+        templateUrl: 'partial/library/studentLibraryNotViewedResources.html?v3=2024.07.04.26',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentLibraryNotViewedResourcesController',
+        resolve: loader(['/resources/connect/library/studentLibraryNotViewedResourcesController.js?v3=2022.12.16.0'])
+    })
+    .when('/librarysendersinfo', {
+        templateUrl: 'partial/library/studentLibrarySendersInfo.html?v3=2022.12.16.0',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentLibrarySendersInfoController',
+        resolve: loader(['/resources/connect/library/studentLibrarySendersInfoController.js?v3=2022.12.16.0'])
+    })
+    .when('/portfolio', {
+        templateUrl: 'partial/portfolio/portfolio.html?v2=2024.07.26.24',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'portfolioController',
+        resolve: loader(['/resources/connect/portfolio/portfolioController.js?v2=2024.07.26.24'])
+    })
+    .when('/studentportfolio/:profileHashId', {
+        templateUrl: 'partial/portfolio/studentPortfolio.html?v2=2024.09.09.06',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'myPortfolioController',
+        resolve: loader(['/resources/connect/portfolio/myPortfolioController.js?v2=2024.07.26.24'])
+    })
+     .when('/blog/:profileHashId', {
+        templateUrl: 'partial/portfolio/studentPortfolio.html?v2=2024.09.09.06',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'blogManagementController',
+        resolve: loader(['/resources/connect/portfolio/blogManagementController.js?v2=2024.07.26.24'])
+    })
+    .when('/classofyear/:profileHashId', {
+        templateUrl: 'partial/portfolio/studentPortfolio.html?v2=2024.09.09.06',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'classOfYearController',
+        resolve: loader(['/resources/connect/portfolio/classOfYearController.js?v2=2023.10.26.18'])
+    })
+    .when('/documents/:profileHashId', {
+        templateUrl: 'partial/portfolio/studentPortfolio.html?v2=2024.09.09.06',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'documentController',
+        resolve: loader(['/resources/connect/portfolio/documentsController.js?v2=2024.09.09.06'])
+    })
+    .when('/studentEvaluationGradeByPeriod', {
+        templateUrl: 'partial/evaluationGrades/cardEvaluationGrades.html?v3=2023.03.27.1',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentEvaluationGradeByPeriodController',
+        resolve: loader(['/resources/connect/evaluationGrades/studentEvaluationGradeByPeriodController.js?v3=2023.03.27.1'])
+    })
+    .when('/studentEvaluationGradeByCourse', {
+        templateUrl: 'partial/evaluationGrades/cardEvaluationGrades.html?v3=2023.03.27.1',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentEvaluationGradeByCourseController',
+        resolve: loader(['/resources/connect/evaluationGrades/studentEvaluationGradeByCourseController.js?v3=2023.03.27.1'])
+    })
+    .when('/studentEvaluationGradeCard', {
+        templateUrl: 'partial/evaluationGrades/cardEvaluationGrades.html?v3=2023.03.27.1',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentEvaluationGradeCardController',
+        resolve: loader(['/resources/connect/evaluationGrades/studentEvaluationGradeCardController.js?v3=2023.03.27.1'])
+    })
+    .when('/prek', {
+        templateUrl: 'partial/prek/studentPrek.html?v3=2022.7.29.0',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentPrekController',
+        resolve: loader(['/resources/connect/prek/studentController.js?v3=2022.7.29.0'])
+    })
+    .when('/messages', {
+        templateUrl: 'partial/messages-v2/messages.html?v3=2024.04.04.04',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'messagesController',
+        resolve: loader(['/resources/connect/messages-v2/messagesController.js?v3=2024.03.06.06'])
+    })
+    .when('/draftmessages', {
+        templateUrl: 'partial/messages-v2/messages.html?v3=2024.04.04.04',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'draftMessagesController',
+        resolve: loader(['/resources/connect/messages-v2/draftMessagesController.js?v3=2024.02.15.0'])
+    })
+    .when('/invitations', {
+        templateUrl: 'partial/rooms/studentRooms.html?v3=2023.8.7.2',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentRoomsController',
+        resolve: loader(['/resources/connect/rooms/studentRoomsController.js?v3=2022.5.19.12'])
+    })
+    .when('/discussions', {
+        templateUrl: 'partial/discussions/studentDiscussions.html?v3=2023.8.14.2',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'studentDiscussionsController',
+        resolve: loader(['/resources/connect/discussions/studentDiscussionsController.js?v3=2022.9.18.0'])
+    })
+    .when('/polls', {
+    	templateUrl: 'partial/poll/studentPolls.html?v3=2023.09.19.24',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'pollsController',
+        resolve: loader(['/resources/connect/poll/js/pollsController.js?v3=2022.9.26.0'])
+    })    
+    .when('/pollsstatistics', {
+    	templateUrl: '/partial/poll/studentPolls.html?v3=2023.09.19.24',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'pollsStatisticsController',
+        resolve: loader(['/resources/connect/poll/js/pollsStatisticsController.js?v3=2022.9.26.0'])
+    })  
+    .when('/pollstatisticsdetails', {
+    	templateUrl: '/partial/poll/studentPolls.html?v3=2023.09.19.24',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'pollStatisTicsDetailsContoller',
+        resolve: loader(['/resources/connect/poll/js/pollStatisticsDetailsController.js?v3=2023.03.06.0'])
+    })
+    .when('/groups', {
+        templateUrl: 'partial/messages-v2/messages.html?v3=2024.04.04.04',
+        reloadOnSearch: false,
+        access_level: false,
+        controller : 'generalGroupsController',
+        resolve: loader(['/resources/connect/messages-v2/groupsController.js?v3=2023.11.06.1'])
+    })  
+    .when('/receivedrequestsmanagement', {
+    	templateUrl: '/partial/request/requestMain.html?v3=2024.08.15.0',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'receivedRequestsManagementController',
+    	resolve: loader(['/resources/connect/request/js/receivedRequestsManagementController.js?v3=2023.4.7.2'])
+    }) 
+    .when('/sentrequestsmanagement', {
+    	templateUrl: '/partial/request/requestMain.html?v3=2024.08.15.0',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'sentRequestsManagementController',
+    	resolve: loader(['/resources/connect/request/js/sentRequestsManagementController.js?v3=2022.10.27.555'])
+    }) 
+    .when('/formsrequestsmanagement', {
+    	templateUrl: '/partial/request/requestMain.html?v3=2024.08.15.0',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'formsRequestsManagementController',
+    	resolve: loader(['/resources/connect/request/js/formsRequestsManagementController.js?v3=2024.07.17.0'])
+    }) 
+    .when('/requestmanagement', {
+    	templateUrl: '/partial/request/requestMain.html?v3=2024.08.15.0',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'requestManagementController',
+    	resolve: loader(['/resources/connect/request/js/requestManagementController.js?v3=2024.07.17.0'])
+    })
+    .when('/documentcategories', {
+    	templateUrl: '/partial/documents/documentCategories.html?v3=2024.03.15.02',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'documentCategoriesController',
+    	resolve: loader(['/resources/connect/documents/js/documentCategoriesController.js?v3=2024.04.22.62'])
+    }) 
+    .when('/documentresources', {
+    	templateUrl: '/partial/documents/documentResources.html?v3=2024.04.15.02',
+    	reloadOnSearch: false,
+    	access_level: false,
+    	controller : 'documentResourcesController',
+    	resolve: loader(['/resources/connect/documents/js/documentResourcesController.js?v3=2024.04.22.62'])
+    })  
+    .otherwise({
+        redirectTo: '/home'
+    });
+});
+
+userMainApp.service('studentMainService', function($http,$cookies) { 
+	return {
+		getStudentCourses: function() { 
+	    	return  $http.post('/webservice/eschool/studentHomeWebService/getStudentCourses',{}, {
+				headers : {
+					'Authorization' : 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+	    },
+		getUnreadMessages : function() {
+			return $http.post('/connect/webservice/conversation/getUnreadMessagesCountByUser/', {
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		},
+		getUnseenDocuments : function(studentHashId) {
+			return $http.post('/connect/webservice/adminDocuments/getUnseenDocumentsCountByUser/', {
+				studentHashId: studentHashId
+			}, {
+				headers : {
+					'Authorization' : 'Bearer ' + $cookies.get('tkn')
+				}
+			});
+		}
+	}
+});
+
+userMainApp.directive('selectSearch', function() {
+	return {
+		/*require : 'ngModel',*/
+		link : function(scope, element, attrs, ngModelController) {
+			element.bind('keydown', function(ev) {
+		    	ev.stopPropagation();
+		    });
+		}
+	};
+});
+
+/*library*/
+userMainApp.directive('libraryOnError', function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attr) {
+            element.on('error', function () {
+                var origSrc = element.attr('data');
+                var timeout, attempsCount = 0;
+
+                element.attr('src', attr.libraryOnError);
+
+                function reload() {
+                    attempsCount = attempsCount + 1;
+                    if (attempsCount > 5)
+                        return;
+
+                    timeout = setTimeout(function () {
+
+                        var newImg = new Image;
+                        newImg.onload = function () {
+                            element.attr('src', this.src);
+                            clearTimeout(timeout);
+                        }
+                        newImg.onerror = function () {
+                            reload();
+                        }
+                        newImg.src = origSrc;
+
+                    }, 1000);
+
+                }
+
+                //reload();
+
+            })
+        }
+    }
+});
+
+/*branch*/
+userMainApp.directive('branchOnError', function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attr) {
+            element.on('error', function () {
+                var origSrc = element.attr('data');
+                var timeout, attempsCount = 0;
+
+                element.attr('src', attr.branchOnError);
+
+                function reload() {
+                    attempsCount = attempsCount + 1;
+                    if (attempsCount > 5)
+                        return;
+
+                    timeout = setTimeout(function () {
+
+                        var newImg = new Image;
+                        newImg.onload = function () {
+                            element.attr('src', this.src);
+                            clearTimeout(timeout);
+                        }
+                        newImg.onerror = function () {
+                            reload();
+                        }
+                        newImg.src = origSrc;
+
+                    }, 1000);
+
+                }
+
+                //reload();
+
+            })
+        }
+    }
+});
+
+/*library*/
+userMainApp.directive('ebookOnError', function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attr) {
+            element.on('error', function () { 
+                var timeout, attempsCount = 0;
+
+                element.attr('src', attr.ebookOnError);
+
+                function reload() {
+                    attempsCount = attempsCount + 1;
+
+                    timeout = setTimeout(function () {
+
+                        var newImg = new Image;
+                        newImg.onload = function () {
+                            element.attr('src', this.src);
+                            clearTimeout(timeout);
+                            scope.$parent.itm.isGenerated = true;
+                            scope.$apply();
+                        }
+                        newImg.onerror = function () {
+                            reload();
+                        }
+                        newImg.src = element.attr('data') + "?t=" + new Date().getTime();
+
+                    }, 5000);
+
+                }
+
+                reload();
+
+            })
+        }
+    }
+});
+
+/*Messages*/
+userMainApp.directive('msgOnError', function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attr) {
+            element.on('error', function () {
+                var origSrc = element.attr('data');
+                var timeout, attempsCount = 0;
+
+                element.attr('src', attr.msgOnError);
+
+                function reload() {
+                    attempsCount = attempsCount + 1;
+                    if (attempsCount > 5)
+                        return;
+
+                    timeout = setTimeout(function () {
+
+                        var newImg = new Image;
+                        newImg.onload = function () {
+                            element.attr('src', this.src);
+							element.removeClass("not-found");
+                            clearTimeout(timeout);
+                        }
+                        newImg.onerror = function () {
+                            element.addClass("not-found");
+                            reload();
+                        }
+                        newImg.src = origSrc;
+
+                    }, 1000);
+
+                }
+
+                reload();
+
+            })
+        }
+    }
+});
+
+/*profile*/
+userMainApp.directive('profileOnError', function () {
+     return {
+        restrict: 'A',
+        link: function (scope, element, attr) {
+            element.on('error', function () {
+                var origSrc = element.attr('data');
+                var timeout, attempsCount = 0;
+
+                element.attr('src', attr.profileOnError);
+
+                function reload() {
+                    attempsCount = attempsCount + 1;
+                    if (attempsCount > 5)
+                        return;
+
+                    timeout = setTimeout(function () {
+
+                        var newImg = new Image;
+                        newImg.onload = function () {
+                            element.attr('src', this.src);
+                            clearTimeout(timeout);
+                        }
+                        newImg.onerror = function () {
+                            reload();
+                        }
+                        newImg.src = origSrc;
+
+                    }, 1000);
+
+                }
+
+                //reload();
+
+            })
+        }
+    }
+});
+
+/*Portfolio*/
+userMainApp.directive('portfolioOnError', function () {
+    return {
+        restrict: 'A',
+        link: function ($scope, element, attr) {
+            element.on('error', function () {
+                var origSrc = element.attr('data');
+                var timeout, attempsCount = 0;
+
+                element.attr('src', attr.portfolioOnError);
+
+                function reload() {
+                    attempsCount = attempsCount + 1;
+                    if (attempsCount > 5)
+                        return;
+
+                    timeout = setTimeout(function () {
+                        var newImg = new Image;
+                        newImg.onload = function () {
+                            element.attr('src', this.src);
+							element.removeClass("not-found");
+                            clearTimeout(timeout);
+							$scope.getDonePartsNumber();
+                        }
+                        newImg.onerror = function () {
+                            element.addClass("not-found");
+							$scope.getDonePartsNumber();
+                            reload();
+                        }
+                        newImg.src = origSrc;
+
+                    }, 1000);
+                }
+
+                reload();
+
+            })
+        }
+    }
+});
+
+/*conversation*/
+userMainApp.directive('ngMessageEnter', function() {
+	return function(scope, element, attrs) {
+		element.bind("keydown keypress", function(event) {
+			if(event.which === 13 && !event.shiftKey) {
+				scope.$apply(function(){
+					scope.$eval(attrs.ngMessageEnter, {'event': event});
+				});
+
+				event.preventDefault();
+			}
+		});
+	};
+});
+
+/*conversation*/
+userMainApp.directive('resizeTextarea', function () {
+	return {
+		restrict: 'E',
+		transclude: true,
+		replace: true,
+		template: "<textarea></textarea>",
+		link: function (scope, element, attrs) {
+			var HEIGHT = 35;
+			var el = angular.element(element[0])
+			el.css('lineHeight', HEIGHT + "px");
+			el.css('height', HEIGHT + "px");
+			el.css('resize','none');
+			el.css('padding','8px');
+			el.css('padding-left','10px');
+			el.css('max-height','70px');
+			el.css('line-height','1.4');
+
+			var resize = function (e) {
+				el.css({
+					'height': 'auto',
+					'height': this.scrollHeight + 'px'
+				});
+
+			};
+			el.on('input', resize);
+		}
+	};
+});
+
+userMainApp.filter('toMinSec', function () {
+    return function (input) {
+        var minutes = parseInt(Math.floor(input) / 60, 10);
+        var seconds = Math.floor(input) % 60;
+        if (minutes < 10) {
+            minutes = `0${minutes}`;
+        }
+        if (seconds < 10) {
+            seconds = `0${seconds}`;
+        }
+        return (minutes ? minutes : '00') + ':' + (seconds ? seconds : '00');
+    }
+});
+
+userMainApp.directive('requestOnError', function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attr) {
+            element.on('error', function () {
+                var origSrc = element.attr('data');
+                var timeout, attempsCount = 0;
+
+                element.attr('src', attr.requestOnError);
+
+                function reload() {
+                    attempsCount = attempsCount + 1;
+                    if (attempsCount > 0)
+                        return;
+
+                    timeout = setTimeout(function () {
+
+                        var newImg = new Image;
+                        newImg.onload = function () {
+                            element.attr('src', this.src);
+                            clearTimeout(timeout);
+                        }
+                        newImg.onerror = function () {
+                            reload();
+                        }
+                        newImg.src = origSrc;
+
+                    }, 1000);
+
+                }
+
+                //reload();
+
+            })
+        }
+    }
+});
+
+userMainApp.filter("linkify", function () {
+	  return function commasFilter(str) {
+		  
+	  if(str == undefined){
+		  return "";
+	  }
+		var re = /(\(.*?)?\b((?:https?|ftp|file):\/\/[-a-z0-9+&@@#\/%?=~_()|!:,.;]*[-a-z0-9+&@@#\/%=~_()|])/ig;
+	    return str.replace(re, function(match, lParens, url) {
+	        var rParens = '';
+	        lParens = lParens || '';
+
+	        var lParenCounter = /\(/g;
+	        while (lParenCounter.exec(lParens)) {
+	            var m;
+	            if (m = /(.*)(\.\).*)/.exec(url) ||
+	                    /(.*)(\).*)/.exec(url)) {
+	                url = m[1];
+	                rParens = m[2] + rParens;
+	            }
+	        }
+	        return lParens + "<a href='" + url + "' target='_blank'>" + url + "</a>" + rParens;
+	    });
+	  }
+});
+
+userMainApp.filter('reverse', function() {
+	  return function(items) {
+		if(items != null)
+	    	return items.slice().reverse();
+	    else
+	    	return items;
+	  };
+	});
+
+/***** Main Controller *****/
+userMainApp.controller('studentMainController', 
+		function ($scope, $filter, $http, $translate, $window, $timeout, $interval, $location, $cookies, studentMainService, $mdSidenav, $mdToast, $mdDialog) {
+
+	$scope.helpPreviewed = false;
+	$scope.showRightPanel = false;
+	$scope.currentView;
+	$scope.courses = []; 
+	
+	$scope.loadingFlag = true;
+	$scope.noDataMsg = false;
+	$scope.noCxnMsg = false;
+	$scope.loadingNotification = true;
+
+	$scope.sessionInfo = sessionInfo; 
+	$scope.userImageURL = userImageURL;
+	$scope.defaultUserImage = defaultUserImage;
+	$scope.userFullName = userFullName;
+	$scope.userType = userType;
+	$scope.userPermissions = userPermissions;
+	$scope.teacherType = teacherType;
+	
+	$scope.sendMessageToTeachers = sendMessageToTeachers;
+	$scope.allowMessageReply = allowMessageReply;
+	$scope.allowGroupConversation = allowGroupConversation;
+	$scope.mediaUploadService = mediaUploadService;
+	
+	$scope.resumableUploadService = resumableUploadService;
+	$scope.processingCheckService = processingCheckService;
+	$scope.resumableUploadEnabled = resumableUploadEnabled;
+	
+	$scope.mainTodayDate = mainTodayDate;
+	
+	$scope.enableDocuments = enableDocuments;
+
+	$scope.teacherTypeList = teacherTypeList;
+	
+	$scope.canDeleteMessages = canDeleteMessages;
+	$scope.canDeleteReceivedMessages = canDeleteReceivedMessages;
+	$scope.canSendVoiceNote = canSendVoiceNote;
+	
+	$scope.restrictedSystemLanguages = restrictedSystemLanguages;
+	
+	$scope.getMetaData = function() {
+		
+		$scope.loadingFlag = true;
+		$scope.noDataMsg = false;
+		
+		studentMainService.getStudentCourses().then(function(resp){  
+			$scope.courses = resp.data.courses;
+
+			$scope.courses.forEach(function(crs){
+				crs.localizedText = $scope.localize(crs.courseName);
+			});
+
+			var url = $location.path().split('/');
+			$scope.currentView = url[1];
+			
+			$scope.noDataMsg = $scope.courses.length == 0;
+			$scope.loadingFlag = false;
+			$scope.noCxnMsg = false;
+
+			$('body').show();
+			$scope.loadingNotification = false;
+		}, function(data){
+			$scope.errorNotification = true;
+			$scope.loadingNotification = false;
+			$scope.noCxnMsg = true;
+			$scope.loadingFlag = false;
+			if(err.status == 401)
+				window.location.href = '/';
+		});
+		
+	}
+
+	$scope.getMetaData();
+		
+	$scope.$on("$routeChangeSuccess", function () {
+		var url = $location.path().split('/');
+		$scope.currentView = url[1];
+
+		$('.navigation').find('li').removeClass('active');
+		        
+	});
+	
+    $scope.switchPage = function (page) {
+        var apply = function () {
+            if (($scope.currentView != page ||  page == 'portfolio') && !$scope.errorNotification) {
+                $scope.currentView = page;
+                
+                $location.search("");
+                $location.path('/' + page);
+            }
+        }
+
+        apply();
+        
+		if (!$scope.$$phase) 
+            $scope.$apply();
+    }
+
+////////////////////////////////////////////////////////////////////////////// Link Preview //////////////////////////////////////////////////////////////////////////////
+	
+	$scope.file;
+
+	$scope.getResourceById = function(resourceId){
+
+    	$http.post('/webservice/eschool/teacherLibraryWebService/getResourceById',{resourceId: resourceId}, {
+			headers : {
+				'Authorization' : 'Bearer ' + $cookies.get('tkn')
+			}
+		}).then(function(resp) {
+			$scope.file = resp.data;
+		});
+	}
+
+
+	$scope.showMedia = function(resource, isDrivePerview, isOfficePreview){
+		
+		var mediaWindow = window.open("","_blank");
+
+		$http.post('/webservice/eschool/teacherLibraryWebService/showMedia/', { 
+    		messageId: resource.resourceId,
+    		fileName: resource.fileName,
+    		fileNewName: resource.fileNewName,
+    		mimeType: resource.mimeType,
+    		messageSessionName: resource.categoryNewName,
+    		isDrivePerview: isDrivePerview,
+    		isOfficePreview: isOfficePreview
+        }).then(function(resp){
+			mediaWindow.location.href = resp.data;
+        });
+
+	}
+
+	$scope.openResourceLink = function(link){
+		window.open(link, "_blank");
+	}
+	
+	$scope.downloadFile = function (resourceId, fileName, mimeType) {
+        var token = $cookies.get('tkn');
+        $http({
+            url: window.location.protocol + '//' + window.location.host + '/DownloadServlet?serviceType=notification&resourceId=' + resourceId + '&jwt=' + token,
+            method: "GET",
+            /* data: json, //this is your json data string */
+            headers: {
+                'Content-type': 'application/json'
+            },
+            responseType: 'arraybuffer'
+        }).then(function (resp) {
+            var blob = new Blob([resp.data], {
+                type: mimeType
+            });
+            saveAs(blob, fileName);
+        });
+    }
+	
+//////////////////////////////////////////////////////////////////////////////FeedBack //////////////////////////////////////////////////////////////////////////////
+
+	$scope.attachmentsId = [];
+	$scope.uploadedItems = [];
+	var xhrs = []; 
+		
+	$scope.removeAttachment = function(attch){
+		  var attchItemIndex = $scope.uploadedItems.indexOf(attch);
+		  
+		  if(attchItemIndex != -1){
+			  $scope.uploadedItems.splice(attchItemIndex, 1); 
+		  }
+	 
+		  var attchIdIndex = $scope.attachmentsId.indexOf(attch.attachId);
+		  if(attchIdIndex != -1){
+			  var removedAttachmentId = $scope.attachmentsId.splice(attchIdIndex, 1);  
+/*			  if(removedAttachmentId.length > 0){
+				  $scope.removedAttachmentsId.push(removedAttachmentId[0]);
+			  }*/
+		  }
+	  
+		for (var i = 0; i < xhrs.length; i++) {
+			var xhr = xhrs[i];
+			if (xhr.uniqueId == attch.uniqueId) {
+				xhr.abort();
+			}
+		}
+	}
+
+	function guid() {
+		  function s4() {
+		    return Math.floor((1 + Math.random()) * 0x10000)
+		      .toString(16)
+		      .substring(1);
+		  }
+		  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+		    s4() + '-' + s4() + s4() + s4();
+	}
+	
+////////////////////////////////////////////////////////////////////////////// Session Info //////////////////////////////////////////////////////////////////////////////
+	
+	$scope.openWebsiteUrl = function(){
+		if($scope.sessionInfo != null && $scope.sessionInfo.websiteUrl != null)
+		window.open($scope.sessionInfo.websiteUrl, '_blank');
+	}
+	
+////////////////////////////////////////////////////////////////////////////// Localize //////////////////////////////////////////////////////////////////////////////
+    
+    // localization
+    $scope.languages = [{'title': 'English', value: 'en'}, {'title': 'Français', value: 'fr'}, {'title': 'Turkish', value: 'tur'}, {'title': 'العربية', value: 'ar'}];
+    
+    $scope.selectedLanguage = $filter('filter')(
+            $scope.languages, {
+            	value: getParameterByName('lang', document.location.href)
+            }, true)[0];
+    
+	if ($scope.selectedLanguage == null) {
+		$scope.selectedLanguage = $scope.languages[0];
+	}
+	
+	document.body.lang = $scope.selectedLanguage.value;
+	
+	$translate.use($scope.selectedLanguage.value);
+	
+	$scope.updateLanguage = function(selectedLanguage) {
+		updateURLLang(selectedLanguage);
+	}
+	
+	$scope.tooltipDirection = "left";
+	
+	$scope.menuPositionMode = "target-right";
+	$scope.menuReversePositionMode = "target-left";
+	
+	var last = {bottom: true, top: false, left: true, right: false};
+	
+	if($scope.selectedLanguage.value == 'ar' || $scope.selectedLanguage.value == 'kur'){
+		$scope.tooltipDirection = "right";
+		last = {bottom: true, top: false, left: false, right: true};
+		$scope.menuPositionMode = "target-left";
+		$scope.menuReversePositionMode = "target-right";
+	}
+	
+	$scope.toastPosition = angular.extend({},last);
+
+    function sanitizePosition() {
+        var current = $scope.toastPosition;
+
+        if (current.bottom && last.top)
+            current.top = false;
+        if (current.top && last.bottom)
+            current.bottom = false;
+        if (current.right && last.left)
+            current.left = false;
+        if (current.left && last.right)
+            current.right = false;
+
+        last = angular.extend({}, current);
+    }
+    
+	$scope.getToastPosition = function() {
+		sanitizePosition();
+
+		return Object.keys($scope.toastPosition).filter(
+			function(pos) {
+				return $scope.toastPosition[pos];
+			}).join(' ');
+	};
+	
+	$scope.showNetworkErrorDialog = function(ev){
+		$mdDialog.show({
+			contentElement: '#networkErrorDialogId',
+			parent: angular.element(document.body),
+			targetEvent: ev,
+			clickOutsideToClose: false,
+			escapeToClose: false,
+			fullscreen: $scope.customFullscreen, // Only for -xs, -sm breakpoints.
+			parent : angular.element('body')
+		})
+	}
+	
+	$scope.hideDialog = function() {
+		$mdDialog.hide();
+	};
+	
+	$scope.isShowingToast = false;
+	$scope.toastClass = '';
+
+	$scope.showToast = function(msg,toastClass,agendaId,action) {
+		if($scope.isShowingToast && $scope.toastClass == toastClass){
+			$mdToast.updateTextContent(msg);
+		}else{
+			$scope.isShowingToast = true;
+			$scope.toastClass = toastClass;
+			$mdToast.show(
+				$mdToast.simple()
+					.textContent(msg)
+					.position($scope.getToastPosition())
+					.hideDelay(5000)
+					.toastClass(toastClass)
+					.action(agendaId)
+					.parent(document.getElementById('toast-container'))
+		    ).then(function(response) {
+		    	$scope.isShowingToast = false;
+		    	if ( response == 'ok' && action != undefined) {
+		    		action();
+		        }
+	        });
+		}
+	};
+	
+    $scope.localize = function (item) {
+        if (item != undefined) {
+            //$('html').attr('lang', $location.search().lang);
+            $('html').attr('lang', getParameterByName('lang', document.location.href));
+            if ($('html').attr('lang') == 'en')
+                return item.en;
+            if ($('html').attr('lang') == 'ar' || $('html').attr('lang') == 'kur' || $('html').attr('lang') == 'tur')
+                return item.ar;
+            if ($('html').attr('lang') == 'fr')
+                return item.fr;
+            return item.en;
+        }
+    };
+    
+	$scope.logout = function() { 
+		var hostName = document.location.hostname;
+		var hostNamePortal = document.location.hostname;
+		hostName = hostName.replace('www.','.');
+		hostName = hostName.replace('test.','.');
+		$cookies.remove("crm_tkn", {path : '/',domain : hostName});
+		//$cookies.remove("JSESSIONID", {path : '/',domain : hostNamePortal}); 
+    	document.cookie = 'JSESSIONID=;expires=Thu, 01 Jan 1970 00:00:01 GMT;'; 
+		localStorage.clear();
+		location.reload();
+	}
+	
+    $scope.isJSON = function(str) { 
+        try { 
+            return (JSON.parse(str) && !!str); 
+        } catch (e) { 
+            return false; 
+        } 
+    }
+    
+	///////////////////////////////////////
+	
+	$scope.unreadMessages = 0;
+	$scope.getUnreadMessages = function() {
+		studentMainService.getUnreadMessages().then(
+				function(resp) {
+					if(resp.data.receiverUnreadMessageCount && resp.data.receiverUnreadMessageCount.unreadMessagesCount){
+						var unreadMessages = resp.data.receiverUnreadMessageCount.unreadMessagesCount;
+						
+						if(unreadMessages > 99)
+							$scope.unreadMessages = 99; 
+						else
+							$scope.unreadMessages = unreadMessages; 
+					}
+					else{
+						$scope.unreadMessages = 0;
+					}
+				}, function(error) { 
+				});
+	}
+	
+	$scope.getUnreadMessages();
+	
+	/////////
+	///////////////////////////////////////
+	
+	$scope.unseenDocuments = 0;
+	$scope.getUnseenDocuments = function() {
+		studentMainService.getUnseenDocuments().then(
+				function(resp) {
+					if(resp.data.receiverUnseenDocumentsCount && resp.data.receiverUnseenDocumentsCount.unseenDocumentsCount){
+						var unseenDocuments = resp.data.receiverUnseenDocumentsCount.unseenDocumentsCount;
+						
+						if(unseenDocuments > 99)
+							$scope.unseenDocuments = 99; 
+						else
+							$scope.unseenDocuments = unseenDocuments; 
+					}
+					else{
+						$scope.unseenDocuments = 0;
+					}
+				}, function(error) { 
+				});
+	}
+	
+	if($scope.enableDocuments)
+		$scope.getUnseenDocuments();
+	
+});
+
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}

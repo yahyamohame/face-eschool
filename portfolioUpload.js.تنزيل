@@ -1,0 +1,560 @@
+function portfolioUpload(data, saveUploadedResourceFile, resumable) {
+    if (resumable) {
+        portfolioUploadResumable(data, saveUploadedResourceFile);
+    } else {
+        portfolioUploadSelectedFile(data, saveUploadedResourceFile);
+    }
+}
+
+function portfolioUploadResumable(data, saveUploadedResourceFile) {
+
+    let id = generateUUID();
+    var r = new Resumable({
+        target: data.uploadService,
+        chunkSize: 1 * 1024 * 1024,
+        simultaneousUploads: 1,
+        testChunks: true,
+        throttleProgressCallbacks: 1,
+        maxChunkRetries: 60,
+        chunkRetryInterval: 1000,
+        method: "octet",
+        serviceType: data.serviceType,
+        X_fileType: data.X_fileType,
+        token: data.token
+    });
+    data.file.id = id;
+    data.file.serviceType = data.serviceType;
+    data.file.fileType = data.fileType;
+    data.file.token = data.token;
+    r.addFile(data.file);
+
+    var processingCheckService = data.processingCheckService;
+
+    r.on('fileAdded', function (file) {
+        r.opts.GUID = file.file.id;
+        r.opts.encodedFileName = encodeURI(file.fileName);
+        file.file.canceled = false;
+        file.file.retry = false;
+        createPortfolioUploadItem(file, data.currentFolderHashId, data.teacher);
+
+        document.getElementById(file.file.id + 'delete').style.display = "block";
+        document.getElementById(file.file.id + 'retry').style.display = "none";
+
+        r.upload();
+
+        uploadBoxVisibility();
+        uploadMobileBoxVisibility();
+
+        file.file.uploadedItem.find('.delete-file').on('click', function () {
+            r.cancel();
+
+            $(this).closest('.upload-item-box').remove();
+
+            file.file.canceled = true;
+            uploadBoxVisibility();
+            uploadMobileBoxVisibility();
+        });
+
+        file.file.uploadedItem.find('.retry-icon').on('click', function () {
+            //console.log(r.opts.GUID);
+            file.retry();
+            document.getElementById(file.file.id + 'delete').style.display = "block";
+            document.getElementById(file.file.id + 'retry').style.display = "none";
+
+            file.file.uploadedItem.find('.delete-file').on('click', function () {
+                r.cancel();
+
+                $(this).closest('.upload-item-box').remove();
+
+                file.file.canceled = true;
+                uploadBoxVisibility();
+                uploadMobileBoxVisibility();
+            });
+        });
+    });
+    r.on('pause', function () {
+        // Show resume, hide pause
+    });
+    r.on('complete', function () {
+        // Hide pause/resume when the upload has complete
+    });
+    r.on('fileProgress', function (file) {
+        // Handle progress for both the file and the overall upload
+
+        if (Math.floor(r.progress() * 100) == 100)
+            document.getElementById(file.file.id + 'delete').style.display = "none";
+
+        if (!file.file.canceled) {
+            let e = document.getElementById(file.file.id).childNodes;
+            if (e != null) {
+                let e1 = e[1].childNodes;
+                let e2 = e1[0].childNodes;
+                let e3 = e2[0];
+                e3.style.width = Math.floor(r.progress() * 100) + "%";
+            }
+        }
+    });
+    r.on('fileSuccess', function (file, message) {
+        // Reflect that the file upload has completed
+        if (message == "Invalid") {
+            file.file.uploadedItem.find('.uploaded-item-progress').html('<p class="saving">Invalid File<a class="delete-file"></a></p>');
+            r.removeFile(file);
+            file.file.uploadedItem.find('.delete-file').on('click', function () {
+                r.cancel();
+
+                $(this).closest('.upload-item-box').remove();
+
+                file.file.canceled = true;
+                uploadBoxVisibility();
+                uploadMobileBoxVisibility();
+            });
+            return;
+        }
+
+        r.removeFile(file);
+        let uniqueId = file.file.uploadedItem.attr('data-id');
+        let folderHashId = file.file.uploadedItem.attr('data-folderHashId');
+        let teacherId = file.file.uploadedItem.attr('data-teacherId');
+
+        folderHashId = folderHashId != 'null' && folderHashId != 'undefined' ? folderHashId : null;
+        teacherId = teacherId != 'null' && teacherId != 'undefined' ? teacherId : null;
+
+        if (file.file.uploadedItem.attr('data-type').indexOf('video') != -1) {
+            portfolioCompress(file, parseInt(message), teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService);
+        } else {
+            file.file.uploadedItem.find('.uploaded-item-progress').html('<p dir="auto" class="saving">Saving<span>.</span><span>.</span><span>.</span></p>');
+
+            if (data.fileUploadedType == 'ebook') {
+                saveUploadedResourceFile(teacherId, folderHashId, parseInt(message), uniqueId, true, file);
+            } else {
+                saveUploadedResourceFile(teacherId, folderHashId, parseInt(message), uniqueId, false, file);
+            }
+        }
+
+        file.file.uploadedItem.find('.progress-bar').closest(
+            '.uploaded-item-progress').addClass(
+            'done uploading');
+
+        file.file.uploadedItem.find('.delete-file').remove();
+
+        uploadBoxVisibility();
+        uploadMobileBoxVisibility();
+    });
+    r.on('fileError', function (file, message) {
+        // Reflect that the file upload has resulted in error
+        if (file.file.canceled)
+            return;
+
+        document.getElementById(file.file.id + 'delete').style.display = "none";
+        document.getElementById(file.file.id + 'retry').style.display = "block";
+
+
+    });
+}
+
+
+function createPortfolioUploadItem(file, currentFolderHashId, teacher) {
+	console.log('here');
+    var uploadedItem =
+        $('<div class="upload-item-box expend clearfix" id="' + file.file.id + '" data-id="' + file.file.id +
+            '" data-type="' + file.file['type'] +
+            '" data-teacherId="' + teacher +
+            '" data-folderHashId="' + currentFolderHashId + '">' +
+            '<h5>' + file.file.name + '</h5>' +
+            '<div class="uploaded-item-progress expend clearfix">' +
+            '<div class="progress-container">' +
+            '<div style="width: 0%" class="progress-bar"></div>' +
+            '</div>' +
+            '<a id="' + file.file.id + 'delete' + '" class="delete-file"></a>' +
+            '<span id="' + file.file.id + 'retry' + '" class="retry-icon">Retry</span>' +
+            '</div>' +
+            '</div>');
+
+
+    file.file.uploadedItem = uploadedItem;
+
+    file.file.chunkNumber = 1;
+
+    $('.upload-float-box-container').append(file.file.uploadedItem);
+
+    if ($('.upload-float-box').hasClass('hidden')) {
+        $('.upload-float-box').removeClass('hidden')
+    }
+
+}
+
+function portfolioCompress(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService) {
+
+    file.file.uploadedItem.find('.uploaded-item-progress').html('<p dir="auto" class="compressing">Compressing<span>.</span><span>.</span><span>.</span></p>')
+    file.savedFile = false;
+
+    $.ajax({
+        url: '' + processingCheckService + '',
+        data: JSON.stringify({
+            'id': id,
+            'serviceType': file.file.serviceType,
+            'fileType': file.file.fileType
+        }), //ur data to be sent to server
+        contentType: "application/json; charset=utf-8",
+        type: "POST",
+        headers: {
+            'Authorization': 'Bearer ' + file.file.token
+        },
+        success: function (resp) {
+            if (resp != null && resp.acknowledgement) {
+				checkPortfolioCompress(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService);
+            }else if(resp != null && !resp.acknowledgement){
+				 file.file.uploadedItem.find('.uploaded-item-progress').html('<p dir="auto" class="saving">Saving<span>.</span><span>.</span><span>.</span></p>');
+				 saveUploadedResourceFile(teacherId, folderHashId, id, file.file.uploadedItem.attr('data-id'), false, file);
+			}else {
+                checkPortfolioIfRetryCompresing(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService);
+            }
+        },
+        error: function (err) {
+            checkPortfolioIfRetryCompresing(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService);
+        }
+    });
+}
+
+function checkPortfolioCompress(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService) {
+
+    file.file.uploadedItem.find('.uploaded-item-progress').html('<p dir="auto" class="compressing">Compressing<span>.</span><span>.</span><span>.</span></p>')
+    file.savedFile = false;
+
+    $.ajax({
+        url: '' + processingCheckService + '?id='+id+'&serviceType='+file.file.serviceType+'&fileType='+file.file.fileType+'',
+        contentType: "application/json; charset=utf-8",
+        type: "GET",
+        headers: {
+            'Authorization': 'Bearer ' + file.file.token
+        },
+        success: function (resp) {
+            if (resp != null && resp.acknowledgement) {
+                file.file.uploadedItem.find('.uploaded-item-progress').html('<p dir="auto" class="saving">Saving<span>.</span><span>.</span><span>.</span></p>');
+                saveUploadedResourceFile(teacherId, folderHashId, id, file.file.uploadedItem.attr('data-id'), false, file);
+                file.savedFile = true;
+            } else if (resp != null && resp.status == 'compressing') {
+                setTimeout(function () {
+                    checkPortfolioCompress(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService);
+                }, 5000);
+            } else {
+                checkPortfolioIfRetryCheckCompresing(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService);
+            }
+        },
+        error: function (err) {
+            checkPortfolioIfRetryCheckCompresing(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService);
+        }
+    });
+}
+
+
+
+function checkPortfolioIfRetryCompresing(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService) {
+    file.file.uploadedItem.find('.uploaded-item-progress').html('<p class="compressing">Failed<a class="delete-file"></a><a class="retry-icon">Retry</a></p>')
+    file.file.uploadedItem.find('.retry-icon').on('click', function () {
+        let uniqueCompressId = file.file.uploadedItem.attr('data-id');
+        portfolioCompress(file, id, teacherId, folderHashId, uniqueCompressId, saveUploadedResourceFile, processingCheckService);
+    });
+    file.file.uploadedItem.find('.delete-file').on('click', function () {
+        $(this).closest('.upload-item-box').remove();
+        uploadBoxVisibility();
+        uploadMobileBoxVisibility();
+    });
+}
+
+function checkPortfolioIfRetryCheckCompresing(file, id, teacherId, folderHashId, uniqueId, saveUploadedResourceFile, processingCheckService) {
+    file.file.uploadedItem.find('.uploaded-item-progress').html('<p class="compressing">Failed<a class="delete-file"></a><a class="retry-icon">Retry</a></p>')
+    file.file.uploadedItem.find('.retry-icon').on('click', function () {
+        let uniqueCompressId = file.file.uploadedItem.attr('data-id');
+        checkPortfolioCompress(file, id, teacherId, folderHashId, uniqueCompressId, saveUploadedResourceFile, processingCheckService);
+    });
+    file.file.uploadedItem.find('.delete-file').on('click', function () {
+        $(this).closest('.upload-item-box').remove();
+        uploadBoxVisibility();
+        uploadMobileBoxVisibility();
+    });
+}
+
+function uploadBoxVisibility() {
+    if ($('.upload-float-box-container').children().length < 1) {
+        $('.upload-float-box').removeClass('active');
+        $('.upload-float-box').addClass('hidden');
+    } else {
+        if (!$('.upload-float-box').hasClass('active')) {
+            $('.upload-float-box').addClass('active');
+            $('.upload-float-box').removeClass('hidden');
+        }
+    }
+}
+
+function uploadMobileBoxVisibility() {
+    if ($('.upload-float-box-container').children().length < 1) {
+        $('.mobile-upload-box-icon').removeClass('active');
+        $('.mobile-upload-box-popup').removeClass('active');
+    }
+}
+
+var xhrs = [];
+
+function portfolioUploadSelectedFile(data, saveUploadedResourceFile) {
+	
+	console.log(123);
+	
+    var maxFileSize = (1048576 * 1000);
+    var id = generateUniqueId();
+    var file = data.file;
+    var xhrsLength = xhrs.length;
+    xhrs[xhrsLength] = new XMLHttpRequest();
+    xhrs[xhrsLength].uniqueId = id;
+    xhrs[xhrsLength].finished = false;
+
+    var name = file.name;
+    var size = 0;
+    if (file.size > 1048576)
+        size = (Math.round(file.size * 100 / (1048576)) / 100).toString()
+            + 'MB';
+    else
+        size = (Math.round(file.size * 100 / 1024) / 100).toString() + 'KB';
+    var type = file.type;
+
+    var imageContent = "";
+
+    if (file.size < maxFileSize) {
+
+        var uploadedItem =
+            $('<div class="upload-item-box clearfix" data-id="' + id +
+                '" data-type="' + file['type'] +
+                '" data-teacherId="' + data.teacher +
+	            '" data-folderHashId="' + data.currentFolderHashId + '">' +
+                '<h5>' + name + '</h5>' +
+                '<div class="uploaded-item-progress clearfix">' +
+                '<div class="progress-container">' +
+                '<div style="width: 0%" class="progress-bar"></div>' +
+                '</div>' + '<a id="' + id + 'delete' + '" style="display: block" class="delete-file"></a>' + '<a id="' + id + 'retry' + '" style="display: none" class="retry-icon">Retry</a>' + '</div>' +
+                '</div>');
+        $('.upload-float-box-container').append(uploadedItem);
+
+        if ($('.upload-float-box').hasClass('hidden')) {
+            $('.upload-float-box').removeClass('hidden')
+        }
+
+        var fd = new FormData();
+        fd.append("fileToUpload", file, encodeURI(name));
+
+        uploadedItem.find('.delete-file').on('click', function () {
+
+            var btnId = $(this).closest('.upload-item-box').attr('data-id');
+
+            $(this).closest('.upload-item-box').remove();
+
+            uploadBoxVisibility();
+            uploadMobileBoxVisibility();
+
+            for (var i = 0; i < xhrs.length; i++) {
+                //console.log("xhr.abort()");
+                var xhr = xhrs[i];
+                if (xhr.uniqueId == btnId) {
+                    xhr.abort();
+                }
+            }
+        });
+
+        function aborted() {
+            //console.log('Cancelled: ' + this.status);
+        }
+
+        function uploadFailed() {
+            if (document.getElementById(id + 'delete')) {
+                document.getElementById(id + 'delete').style.display = "none";
+            }
+            document.getElementById(id + 'retry').style.display = "block";
+
+            this.upload.uploadedItem.find('.retry-icon').on('click', function () {
+                portfolioUpload(data, saveUploadedResourceFile);
+
+                var btnId = $(this).closest('.upload-item-box').attr('data-id');
+                $(this).closest('.upload-item-box').remove();
+                uploadBoxVisibility();
+                uploadMobileBoxVisibility();
+
+                for (var i = 0; i < xhrs.length; i++) {
+                    //console.log("xhr.abort()");
+                    var xhr = xhrs[i];
+                    if (xhr.uniqueId == btnId) {
+                        xhr.abort();
+                    }
+                }
+
+
+            });
+        }
+
+        function uploadProgress(evt) {
+            ////console.log('uploadProgress : ' + this.status);
+            uploadBoxVisibility();
+            if (evt.lengthComputable) {
+                var percentComplete = Math.round(evt.loaded * 100 / evt.total);
+                ////console.log(percentComplete);
+                this.uploadedItem.find('.progress-bar').width(
+                    percentComplete + "%");
+
+                if (percentComplete == 100) {
+                    this.uploadedItem.find('.progress-bar').closest(
+                        '.uploaded-item-progress').addClass(
+                        'done uploading');
+                    this.uploadedItem.find('.delete-file').remove();
+
+                    if (this.uploadedItem.attr('data-type').indexOf('video') != -1) {
+                        this.uploadedItem.find('.uploaded-item-progress').html('<p class="compressing">Compressing<span>.</span><span>.</span><span>.</span><a id="' + id + 'retry' + '" style="display: none" class="retry-icon"></a></p>')
+                    }
+
+                }
+            }
+        }
+
+        function uploadComplete() {
+
+            for (var j = 0; j < xhrs.length; j++) {
+                if (xhrs[j].uniqueId == this.uniqueId) {
+                    if (xhrs[j].readyState === xhrs[j].DONE) {
+                        if (xhrs[j].status === 200) {
+
+                            //console.log(xhrs[j].response);
+                            var attachId = JSON.parse(xhrs[j].response).uploadedAttachmentsId;
+
+                            if (attachId == null)
+                                uploadFailed();
+
+                            this.upload.uploadedItem.find('.uploaded-item-progress').html('<p dir="auto" class="saving">Saving<span>.</span><span>.</span><span>.</span></p>');
+
+                            let uniqueId = this.upload.uploadedItem.attr('data-id');
+                            let folderHashId = this.upload.uploadedItem.attr('data-folderHashId');
+                            let teacherId = this.upload.uploadedItem.attr('data-teacherId');
+
+                            folderHashId = folderHashId != 'null' && folderHashId != 'undefined' ? folderHashId : null;
+                            teacherId = teacherId != 'null' && teacherId != 'undefined' ? teacherId : null;
+                            if (data.fileUploadedType == 'ebook') {
+                                saveUploadedResourceFile(teacherId, folderHashId, attachId[0], uniqueId, true);
+                            } else {
+                                saveUploadedResourceFile(teacherId, folderHashId, attachId[0], uniqueId, false);
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+
+        // let xhr know what exactly uploadedItem it is dealing with
+        xhrs[xhrsLength].upload.uploadedItem = uploadedItem;
+
+        xhrs[xhrsLength].upload.addEventListener("progress", uploadProgress, false);
+        xhrs[xhrsLength].addEventListener("load", uploadComplete, false);
+        xhrs[xhrsLength].addEventListener('abort', aborted, false);
+        xhrs[xhrsLength].addEventListener('error', uploadFailed, false);
+
+        //console.log("before post");
+
+        xhrs[xhrsLength].open("POST", data.mediaUploadService);
+
+        xhrs[xhrsLength].onload = function () {
+            if (this.responseText.includes("Error")) {
+                document.getElementById(id + 'retry').style.display = "block";
+
+                this.upload.uploadedItem.find('.retry-icon').on('click', function () {
+                    data.resumable = true;
+                    upload(data, saveUploadedResourceFile);
+
+                    var btnId = $(this).closest('.upload-item-box').attr('data-id');
+                    $(this).closest('.upload-item-box').remove();
+                    uploadBoxVisibility();
+                    uploadMobileBoxVisibility();
+
+                    for (var i = 0; i < xhrs.length; i++) {
+                        //console.log("xhr.abort()");
+                        var xhr = xhrs[i];
+                        if (xhr.uniqueId == btnId) {
+                            xhr.abort();
+                        }
+                    }
+
+                });
+            }
+        };
+
+        xhrs[xhrsLength].setRequestHeader('X_token', data.token);
+        xhrs[xhrsLength].setRequestHeader('encodedFileName', encodeURI(name));
+        xhrs[xhrsLength].setRequestHeader('X_serviceType', "studentPortfolio/documents");
+        xhrs[xhrsLength].setRequestHeader('X_FILEID', id);
+        xhrs[xhrsLength].send(fd);
+
+
+        xhrs[xhrsLength].onreadystatechange = function () {
+            if (this.readyState === 4) {
+                if (this.status === 200) {
+                    //console.log('successful');
+
+                } else {
+                    document.getElementById(id + 'retry').style.display = "block";
+
+                    this.upload.uploadedItem.find('.retry-icon').on('click', function () {
+                        data.resumable = true;
+                        upload(data, saveUploadedResourceFile);
+
+                        var btnId = $(this).closest('.upload-item-box').attr('data-id');
+                        $(this).closest('.upload-item-box').remove();
+                        uploadBoxVisibility();
+                        uploadMobileBoxVisibility();
+
+                        for (var i = 0; i < xhrs.length; i++) {
+                            //console.log("xhr.abort()");
+                            var xhr = xhrs[i];
+                            if (xhr.uniqueId == btnId) {
+                                xhr.abort();
+                            }
+                        }
+
+                    });
+
+                }
+            }
+        }
+    } else {
+        var faildMsg = '(faild) [' + name + '] size is greater than 1 GB';
+        var faildFile = $('<div class="upload-item-box clearfix" data-id="'
+            + id + '">' + '<h5 style="color:red" title="' + faildMsg + '">' + faildMsg + '</h5>'
+            + '<div class="uploaded-item-progress clearfix">'
+            + '<div class="progress-container">'
+            + '<div style="width: 0%;" class="progress-bar"></div>'
+            + '</div>' + '<a class="delete-file"></a>' + '</div>'
+            + '</div>');
+        $('.upload-float-box-container').append(faildFile);
+        if ($('.upload-float-box').hasClass('hidden')) {
+            $('.upload-float-box').removeClass('hidden')
+        }
+    }
+
+}
+
+function generateUniqueId() {
+    var time = new Date().getTime();
+    while (time == new Date().getTime())
+        ;
+    return new Date().getTime();
+}
+
+function generateUUID() { // Public Domain/MIT
+    var d = new Date().getTime();//Timestamp
+    var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now() * 1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16;//random number between 0 and 16
+        if (d > 0) {//Use timestamp until depleted
+            r = (d + r) % 16 | 0;
+            d = Math.floor(d / 16);
+        } else {//Use microseconds since page-load if supported
+            r = (d2 + r) % 16 | 0;
+            d2 = Math.floor(d2 / 16);
+        }
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
