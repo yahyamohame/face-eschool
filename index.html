@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Are You fardin?</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f3f3;
+        }
+        .container {
+            margin: 100px auto;
+            padding: 20px;
+            max-width: 400px;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        h1 {
+            color: #333;
+        }
+        .captcha {
+            margin: 15px 0;
+            font-size: 20px;
+            letter-spacing: 3px;
+            font-weight: bold;
+            color: #444;
+            background-color: #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 90%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            color: red;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Are You fardin?</h1>
+        <p>only fardin can enter this page</p>
+        <div class="captcha">only fardin now the fucking password</div>
+        <form id="captchaForm">
+            <input type="text" id="captchaInput" placeholder="Enter your answer" required>
+            <button type="submit">Submit</button>
+        </form>
+        <p id="result">you are not fardin ya sharmota</p>
+    </div>
+    <script>
+        const form = document.getElementById('captchaForm');
+        const input = document.getElementById('captchaInput');
+        const result = document.getElementById('result');
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent form submission
+            if (input.value.trim() === '612345') {
+                // Redirect to the next page
+                window.location.href = 'https://yahyamohame.github.io/fuckfardinass/'; // Replace with your target page
+            } else {
+                result.style.display = 'block'; // Show the error message
+                input.value = ''; // Clear the input
+            }
+        });
+    </script>
+</body>
+</html>
